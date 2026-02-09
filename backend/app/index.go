@@ -7,6 +7,7 @@ import (
 	"iano_chat/pkg/logger"
 	"iano_chat/pkg/web"
 	"iano_chat/routes"
+	"iano_chat/services"
 	"log/slog"
 	"net/http"
 	"os"
@@ -23,10 +24,11 @@ type App struct {
 	RootPath   string // 应用根目录
 	ConfigPath string // 配置文件路径
 
-	DB        *gorm.DB       // 数据库连接
-	cfg       *config.Config // 配置
-	Log       *slog.Logger   // 日志
-	WebEngine *web.Engine    // Web引擎
+	DB           *gorm.DB               // 数据库连接
+	cfg          *config.Config         // 配置
+	Log          *slog.Logger           // 日志
+	WebEngine    *web.Engine            // Web引擎
+	AgentService *services.AgentService // Agent服务
 }
 
 func NewApp(rootPath string, configPath string) (*App, error) {
@@ -104,8 +106,8 @@ func (a *App) InitRootDirs() error {
 }
 
 func (a *App) Start() error {
-	// 启动HTTP服务器
-	a.WebEngine = routes.SetupRoutes(a.Log)
+	a.AgentService = services.NewAgentService(a.DB)
+	a.WebEngine = routes.SetupRoutes(a.DB)
 	a.Log.Info("服务启动", slog.String("port", a.cfg.Server.Port))
 	if err := http.ListenAndServe(":"+a.cfg.Server.Port, a.WebEngine); err != nil {
 		a.Log.Error("服务启动失败", slog.String("error", err.Error()))

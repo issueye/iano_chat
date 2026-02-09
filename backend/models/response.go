@@ -20,3 +20,10 @@ func Error(code int, message string) Response {
 		Message: message,
 	}
 }
+
+func Fail(message string) Response {
+	return Response{
+		Code:    400,
+		Message: message,
+	}
+}
