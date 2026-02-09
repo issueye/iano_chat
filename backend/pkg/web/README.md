@@ -1,0 +1,527 @@
+# Web - 轻量级 Go Web 框架
+
+一个类似于 Gin 的轻量级 Go Web 框架，提供路由、中间件、参数绑定、文件上传等核心功能。
+
+## 特性
+
+- **HTTP 路由** - 支持 GET、POST、PUT、DELETE、PATCH、OPTIONS、HEAD 等方法
+- **路由组** - 支持前缀分组和中间件继承
+- **中间件** - 支持全局和组级中间件链
+- **参数绑定** - 支持 JSON 绑定和验证
+- **路径参数** - 支持 `:param` 风格的路径参数
+- **查询参数** - 支持查询参数获取和默认值
+- **文件上传** - 支持单文件上传和保存
+- **前缀树路由** - O(L) 时间复杂度的路由匹配
+- **优雅关闭** - 支持服务器优雅关闭
+
+## 安装
+
+```bash
+go mod init your-project
+go mod edit -replace iano_chat/pkg/web=./backend/pkg/web
+```
+
+## 快速开始
+
+```go
+package main
+
+import (
+    "iano_chat/pkg/web"
+)
+
+func main() {
+    engine := web.New()
+
+    // 基础路由
+    engine.GET("/ping", func(c *web.Context) {
+        c.String(200, "pong")
+    })
+
+    // 启动服务器
+    engine.Run(":8080")
+}
+```
+
+## 路由
+
+### 基础路由
+
+```go
+engine := web.New()
+
+engine.GET("/users", getUsers)
+engine.POST("/users", createUser)
+engine.PUT("/users/:id", updateUser)
+engine.DELETE("/users/:id", deleteUser)
+```
+
+### 路由组
+
+```go
+engine.Group("/api/v1", func(api *web.Engine) {
+    api.GET("/users", getUsers)
+    api.GET("/users/:id", getUser)
+    api.POST("/users", createUser)
+})
+```
+
+### 路径参数
+
+```go
+engine.GET("/user/:id", func(c *web.Context) {
+    id := c.Param("id")
+    c.String(200, "User ID: %s", id)
+})
+
+// 多参数
+engine.GET("/user/:id/post/:pid", func(c *web.Context) {
+    userID := c.Param("id")
+    postID := c.Param("pid")
+    c.String(200, "User: %s, Post: %s", userID, postID)
+})
+```
+
+## 中间件
+
+### 全局中间件
+
+```go
+engine.Use(func(c *web.Context) {
+    // 请求前处理
+    start := time.Now()
+    
+    c.Next() // 执行后续处理
+    
+    // 请求后处理
+    duration := time.Since(start)
+    log.Printf("Request took %v", duration)
+})
+```
+
+### 路由组中间件
+
+```go
+engine.Group("/admin", func(admin *web.Engine) {
+    admin.Use(authMiddleware)
+    admin.GET("/dashboard", dashboard)
+})
+```
+
+### 认证中间件示例
+
+```go
+func authMiddleware(c *web.Context) {
+    token := c.GetHeader("Authorization")
+    if token == "" {
+        c.String(401, "Unauthorized")
+        c.Abort()
+        return
+    }
+    c.Next()
+}
+```
+
+## 请求处理
+
+### 查询参数
+
+```go
+// GET /search?q=golang&page=1
+engine.GET("/search", func(c *web.Context) {
+    query := c.Query("q")                    // "golang"
+    page := c.DefaultQuery("page", "1")      // "1"
+    limit := c.DefaultQuery("limit", "10")   // 默认值 "10"
+    
+    c.JSON(200, map[string]string{
+        "query": query,
+        "page": page,
+    })
+})
+```
+
+### JSON 绑定
+
+```go
+type User struct {
+    Name  string `json:"name"`
+    Email string `json:"email"`
+}
+
+engine.POST("/users", func(c *web.Context) {
+    var user User
+    if err := c.Bind(&user); err != nil {
+        c.String(400, "Invalid JSON")
+        return
+    }
+    // 处理用户数据
+    c.JSON(201, user)
+})
+```
+
+### 表单数据
+
+```go
+engine.POST("/form", func(c *web.Context) {
+    name := c.PostForm("name")
+    email := c.DefaultPostForm("email", "default@example.com")
+    c.String(200, "Name: %s, Email: %s", name, email)
+})
+```
+
+## 响应
+
+### JSON 响应
+
+```go
+engine.GET("/json", func(c *web.Context) {
+    c.JSON(200, map[string]interface{}{
+        "message": "success",
+        "data": []string{"item1", "item2"},
+    })
+})
+```
+
+### 字符串响应
+
+```go
+engine.GET("/text", func(c *web.Context) {
+    c.String(200, "Hello, %s!", "World")
+})
+```
+
+### HTML 响应
+
+```go
+engine.GET("/html", func(c *web.Context) {
+    c.HTML(200, "<h1>Hello World</h1>")
+})
+```
+
+### 重定向
+
+```go
+engine.GET("/redirect", func(c *web.Context) {
+    c.Redirect(302, "/new-path")
+})
+```
+
+## 内置中间件
+
+### CORS 跨域
+
+```go
+import "iano_chat/pkg/web/middleware"
+
+// 使用默认 CORS 配置
+engine.Use(middleware.CORS())
+
+// 自定义 CORS 配置
+engine.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+    AllowOrigins:     []string{"https://example.com", "https://app.example.com"},
+    AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
+    AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+    AllowCredentials: true,
+    MaxAge:           86400,
+}))
+
+// 允许所有跨域请求
+engine.Use(middleware.AllowAllCORS())
+```
+
+### 日志记录
+
+```go
+// 使用默认日志中间件
+engine.Use(middleware.Logger())
+
+// 简单日志
+engine.Use(middleware.SimpleLogger())
+
+// 自定义格式日志
+engine.Use(middleware.CustomLogger("{time} | {method} {path} | {status} | {latency}"))
+
+// 带配置的日志
+engine.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+    Formatter: func(c *web.Context, latency time.Duration) string {
+        return fmt.Sprintf("[%s] %s %s %d %v",
+            time.Now().Format("2006-01-02 15:04:05"),
+            c.Method,
+            c.Path,
+            c.GetStatus(),
+            latency,
+        )
+    },
+}))
+```
+
+### 恢复（捕获 Panic）
+
+```go
+// 使用默认恢复中间件
+engine.Use(middleware.Recovery())
+
+// 带配置的恢复
+engine.Use(middleware.RecoveryWithConfig(middleware.RecoveryConfig{
+    Handler: func(c *web.Context, err interface{}) {
+        log.Printf("Panic: %v", err)
+        c.String(500, "服务器内部错误")
+    },
+}))
+
+// 带日志的恢复
+logger := log.New(os.Stderr, "[PANIC] ", log.LstdFlags)
+engine.Use(middleware.RecoveryWithLog(logger))
+```
+
+### 认证中间件
+
+```go
+// Bearer Token 认证
+engine.Use(middleware.Auth(func(token string) (interface{}, error) {
+    // 验证 token，返回用户信息
+    if token == "valid-token" {
+        return "user123", nil
+    }
+    return nil, fmt.Errorf("invalid token")
+}))
+
+// API Key 认证
+engine.Use(middleware.APIKeyAuth("your-secret-api-key"))
+
+// Basic Auth
+accounts := map[string]string{
+    "admin": "password123",
+    "user":  "userpass",
+}
+engine.Use(middleware.BasicAuth(accounts))
+```
+
+### 中间件组合使用
+
+```go
+func main() {
+    engine := web.New()
+    
+    // 全局中间件（按顺序执行）
+    engine.Use(middleware.Recovery())  // 1. 捕获 panic
+    engine.Use(middleware.Logger())    // 2. 记录日志
+    engine.Use(middleware.CORS())      // 3. 处理跨域
+    
+    // 路由
+    engine.GET("/ping", func(c *web.Context) {
+        c.String(200, "pong")
+    })
+    
+    // 需要认证的路由组
+    engine.Group("/api", func(api *web.Engine) {
+        api.Use(middleware.Auth(func(token string) (interface{}, error) {
+            // 验证逻辑
+            return "user", nil
+        }))
+        
+        api.GET("/profile", func(c *web.Context) {
+            user, _ := c.Get("user")
+            c.JSON(200, map[string]interface{}{
+                "user": user,
+            })
+        })
+    })
+    
+    engine.Run(":8080")
+}
+```
+
+## 文件上传
+
+### 单文件上传
+
+```go
+engine.POST("/upload", func(c *web.Context) {
+    // 获取上传文件
+    file, err := c.FormFile("file")
+    if err != nil {
+        c.String(400, "Get file error: %v", err)
+        return
+    }
+
+    // 保存文件
+    dst := "./uploads/" + file.Filename
+    if err := c.SaveUploadedFile(file, dst); err != nil {
+        c.String(500, "Save file error: %v", err)
+        return
+    }
+
+    c.String(200, "Upload success: %s", file.Filename)
+})
+```
+
+## Cookie 操作
+
+```go
+// 设置 Cookie
+engine.GET("/set-cookie", func(c *web.Context) {
+    c.SetCookie(&http.Cookie{
+        Name:  "session",
+        Value: "abc123",
+        Path:  "/",
+    })
+    c.String(200, "Cookie set")
+})
+
+// 读取 Cookie
+engine.GET("/get-cookie", func(c *web.Context) {
+    cookie, err := c.Cookie("session")
+    if err != nil {
+        c.String(400, "Cookie not found")
+        return
+    }
+    c.String(200, "Cookie value: %s", cookie.Value)
+})
+```
+
+## 静态文件服务
+
+```go
+// 将 /static 路径映射到 ./public 目录
+engine.Static("/static", "./public")
+```
+
+## 服务器配置
+
+### 超时设置
+
+```go
+engine := web.New()
+engine.SetReadTimeout(30 * time.Second)
+engine.SetWriteTimeout(30 * time.Second)
+```
+
+### HTTPS 服务
+
+```go
+engine.RunTLS(":443", "cert.pem", "key.pem")
+```
+
+### 优雅关闭
+
+```go
+// 启动服务器
+go engine.Run(":8080")
+
+// 优雅关闭
+engine.Shutdown(5 * time.Second)
+```
+
+## 完整示例
+
+```go
+package main
+
+import (
+    "log"
+    "time"
+    "iano_chat/pkg/web"
+)
+
+func main() {
+    engine := web.New()
+    
+    // 日志中间件
+    engine.Use(func(c *web.Context) {
+        start := time.Now()
+        c.Next()
+        log.Printf("[%s] %s %v", c.Method, c.Path, time.Since(start))
+    })
+    
+    // 健康检查
+    engine.GET("/health", func(c *web.Context) {
+        c.JSON(200, map[string]string{"status": "ok"})
+    })
+    
+    // API 路由组
+    engine.Group("/api/v1", func(api *web.Engine) {
+        // 认证中间件
+        api.Use(func(c *web.Context) {
+            token := c.GetHeader("Authorization")
+            if token == "" {
+                c.String(401, "Unauthorized")
+                c.Abort()
+                return
+            }
+            c.Next()
+        })
+        
+        // 用户相关
+        api.GET("/users", func(c *web.Context) {
+            c.JSON(200, map[string]interface{}{
+                "users": []string{"user1", "user2"},
+            })
+        })
+        
+        api.GET("/users/:id", func(c *web.Context) {
+            c.JSON(200, map[string]string{
+                "id": c.Param("id"),
+            })
+        })
+        
+        api.POST("/users", func(c *web.Context) {
+            var user struct {
+                Name string `json:"name"`
+            }
+            if err := c.Bind(&user); err != nil {
+                c.String(400, "Invalid JSON")
+                return
+            }
+            c.JSON(201, user)
+        })
+    })
+    
+    // 文件上传
+    engine.POST("/upload", func(c *web.Context) {
+        file, err := c.FormFile("file")
+        if err != nil {
+            c.String(400, "Upload failed")
+            return
+        }
+        c.SaveUploadedFile(file, "./uploads/"+file.Filename)
+        c.String(200, "Upload success")
+    })
+    
+    log.Println("Server starting on :8080")
+    engine.Run(":8080")
+}
+```
+
+## 性能
+
+使用前缀树（Trie）实现路由匹配，时间复杂度为 O(L)，其中 L 为路径长度。
+
+```bash
+go test -bench=.
+```
+
+## 测试
+
+```bash
+cd backend/pkg/web
+go test -v
+```
+
+## 目录结构
+
+```
+backend/pkg/web/
+├── web.go        # HTTP 引擎
+├── router.go     # 路由系统
+├── context.go    # 请求上下文
+├── trie.go       # 前缀树路由
+├── web_test.go   # 单元测试
+├── README.md     # 本文档
+└── docs/
+    └── 评估报告.md
+```
+
+## 许可证
+
+MIT
