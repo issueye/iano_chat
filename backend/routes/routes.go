@@ -1,38 +1,19 @@
 package routes
 
 import (
-	"iano_chat/controllers"
-	"iano_chat/middleware"
-	"net/http"
-	"strings"
+	"iano_chat/pkg/web"
+	"iano_chat/pkg/web/middleware"
+	"log/slog"
+	"time"
 )
 
-func SetupRoutes() http.Handler {
-	mux := http.NewServeMux()
+func SetupRoutes(logger *slog.Logger) *web.Engine {
+	engine := web.New()
 
-	baseController := controllers.BaseController{}
+	engine.Use(middleware.RecoveryWithLog(logger))
+	engine.Use(middleware.Logger())
+	engine.Use(middleware.CORS())
+	engine.Use(middleware.IPRateLimit(1000, 10*time.Second))
 
-	mux.HandleFunc("/health", baseController.HealthCheck)
-
-	mux.HandleFunc("/api/users", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-		case http.MethodPost:
-		default:
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})
-
-	mux.HandleFunc("/api/users/", func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		if !strings.HasPrefix(path, "/api/users/") {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-	})
-
-	handler := middleware.CORS(mux)
-	handler = middleware.Logger(handler)
-
-	return handler
+	return engine
 }

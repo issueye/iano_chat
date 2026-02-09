@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"log"
+	"log/slog"
 	"runtime/debug"
 
 	"iano_chat/pkg/web"
@@ -42,15 +43,21 @@ func RecoveryWithConfig(config RecoveryConfig) web.HandlerFunc {
 }
 
 // RecoveryWithLog 带日志的恢复中间件
-func RecoveryWithLog(logger *log.Logger) web.HandlerFunc {
+func RecoveryWithLog(logger *slog.Logger) web.HandlerFunc {
 	return func(c *web.Context) {
 		defer func() {
 			if err := recover(); err != nil {
-				logger.Printf("[PANIC] %s %s - %v\n%s",
-					c.Method,
-					c.Path,
-					err,
-					debug.Stack(),
+				// logger.Printf("[PANIC] %s %s - %v\n%s",
+				// 	c.Method,
+				// 	c.Path,
+				// 	err,
+				// 	debug.Stack(),
+				// )
+				logger.ErrorContext(c.Request.Context(), "[PANIC]",
+					slog.String("method", c.Method),
+					slog.String("path", c.Path),
+					slog.Any("error", err),
+					slog.String("stack", string(debug.Stack())),
 				)
 				c.String(500, "Internal Server Error: %v", err)
 			}

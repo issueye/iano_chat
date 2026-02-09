@@ -5,12 +5,14 @@ import (
 	"iano_chat/pkg/config"
 	"iano_chat/pkg/database"
 	"iano_chat/pkg/logger"
+	"iano_chat/pkg/web"
 	"iano_chat/routes"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -21,9 +23,10 @@ type App struct {
 	RootPath   string // 应用根目录
 	ConfigPath string // 配置文件路径
 
-	DB  *gorm.DB       // 数据库连接
-	cfg *config.Config // 配置
-	Log *slog.Logger   // 日志
+	DB        *gorm.DB       // 数据库连接
+	cfg       *config.Config // 配置
+	Log       *slog.Logger   // 日志
+	WebEngine *web.Engine    // Web引擎
 }
 
 func NewApp(rootPath string, configPath string) (*App, error) {
@@ -62,6 +65,7 @@ func (a *App) InitDB() error {
 		&models.Provider{},
 		&models.Session{},
 		&models.Message{},
+		&models.Agent{},
 	)
 }
 
@@ -101,9 +105,9 @@ func (a *App) InitRootDirs() error {
 
 func (a *App) Start() error {
 	// 启动HTTP服务器
-	router := routes.SetupRoutes()
+	a.WebEngine = routes.SetupRoutes(a.Log)
 	a.Log.Info("服务启动", slog.String("port", a.cfg.Server.Port))
-	if err := http.ListenAndServe(":"+a.cfg.Server.Port, router); err != nil {
+	if err := http.ListenAndServe(":"+a.cfg.Server.Port, a.WebEngine); err != nil {
 		a.Log.Error("服务启动失败", slog.String("error", err.Error()))
 		return err
 	}
@@ -118,6 +122,8 @@ func (a *App) Shutdown() {
 			sqlDB.Close()
 		}
 	}
+
+	a.WebEngine.Shutdown(5 * time.Second)
 }
 
 func (a *App) WatchSignals() {

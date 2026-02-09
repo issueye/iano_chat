@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"bytes"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -79,10 +79,10 @@ func TestRecoveryWithCustomHandler(t *testing.T) {
 
 func TestRecoveryWithLog(t *testing.T) {
 	var buf bytes.Buffer
-	logger := log.New(&buf, "", 0)
 
 	engine := web.New()
-	engine.Use(RecoveryWithLog(logger))
+	slogLogger := slog.New(slog.NewTextHandler(&buf, nil))
+	engine.Use(RecoveryWithLog(slogLogger))
 	engine.GET("/panic", func(c *web.Context) {
 		panic("logged panic")
 	})
