@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
@@ -10,8 +11,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 )
 
-type HTTPClientTool struct {
-}
+type HTTPClientTool struct{}
 
 func (t *HTTPClientTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 	return &schema.ToolInfo{
@@ -51,6 +51,11 @@ func (t *HTTPClientTool) InvokableRun(ctx context.Context, argumentsInJSON strin
 		Body    string            `json:"body"`
 		Headers map[string]string `json:"headers"`
 		Query   map[string]string `json:"query"`
+	}
+
+	// 解析参数
+	if err := json.Unmarshal([]byte(argumentsInJSON), &args); err != nil {
+		return "", err
 	}
 
 	// 进行http请求
