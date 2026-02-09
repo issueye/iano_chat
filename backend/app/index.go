@@ -58,7 +58,11 @@ func (a *App) InitDB() error {
 
 	a.DB = db
 
-	return a.DB.AutoMigrate(&models.User{})
+	return a.DB.AutoMigrate(
+		&models.Provider{},
+		&models.Session{},
+		&models.Message{},
+	)
 }
 
 func (a *App) InitLogger() {

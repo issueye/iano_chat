@@ -4,7 +4,7 @@ import "time"
 
 // 供应商
 type Provider struct {
-	ID          int64     `json:"id"`
+	BaseModel
 	Name        string    `json:"name"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
