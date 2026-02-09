@@ -112,7 +112,8 @@ func (e *Engine) Group(prefix string, fn func(*Engine)) {
 }
 
 func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	c := newContext(w, r)
+	c := acquireContext(w, r)
+	defer releaseContext(c)
 	e.router.handleRequest(c)
 }
 
