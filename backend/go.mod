@@ -1,6 +1,8 @@
 module iano_chat
 
-go 1.23.8
+go 1.24.0
+
+toolchain go1.24.11
 
 require (
 	github.com/cloudwego/eino v0.7.32
@@ -61,6 +63,7 @@ require (
 	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/libc v1.22.5 // indirect
 	modernc.org/mathutil v1.5.0 // indirect

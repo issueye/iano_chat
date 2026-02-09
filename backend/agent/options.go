@@ -23,3 +23,12 @@ func WithSummaryConfig(cfg SummaryConfig) Option {
 		c.Summary = cfg
 	}
 }
+
+// WithMaxRounds 设置最大对话轮数
+func WithMaxRounds(maxRounds int) Option {
+	return func(c *Config) {
+		if maxRounds > 0 {
+			c.MaxRounds = maxRounds
+		}
+	}
+}

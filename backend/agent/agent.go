@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/cloudwego/eino/components/model"
-	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/flow/agent/react"
 	"github.com/cloudwego/eino/schema"
@@ -17,9 +16,24 @@ import (
 
 // Config Agent 配置
 type Config struct {
-	Tools    []Tool
-	Callback MessageCallback
-	Summary  SummaryConfig
+	Tools     []Tool
+	Callback  MessageCallback
+	Summary   SummaryConfig
+	MaxRounds int // 最大对话轮数限制
+}
+
+// DefaultConfig 返回默认配置
+func DefaultConfig() *Config {
+	return &Config{
+		Tools: make([]Tool, 0),
+		Summary: SummaryConfig{
+			KeepRecentRounds: 4,   // 默认保留最近4轮
+			TriggerThreshold: 8,   // 达到8轮触发摘要
+			MaxSummaryTokens: 500, // 摘要最多500 tokens
+			Enabled:          true,
+		},
+		MaxRounds: 50, // 默认最大50轮对话
+	}
 }
 
 // ConversationLayer 对话分层存储
@@ -47,16 +61,8 @@ type Agent struct {
 
 // NewAgent 创建新的 Agent 实例
 func NewAgent(chatModel model.ToolCallingChatModel, opts ...Option) (*Agent, error) {
-	// 默认配置
-	cfg := &Config{
-		Tools: make([]Tool, 0),
-		Summary: SummaryConfig{
-			KeepRecentRounds: 4,   // 默认保留最近4轮
-			TriggerThreshold: 8,   // 达到8轮触发摘要
-			MaxSummaryTokens: 500, // 摘要最多500 tokens
-			Enabled:          true,
-		},
-	}
+	// 使用默认配置
+	cfg := DefaultConfig()
 
 	// 应用配置选项
 	for _, opt := range opts {
@@ -64,7 +70,8 @@ func NewAgent(chatModel model.ToolCallingChatModel, opts ...Option) (*Agent, err
 	}
 
 	agent := &Agent{
-		config: cfg,
+		config:    cfg,
+		maxRounds: cfg.MaxRounds, // 初始化 maxRounds
 		conversation: &ConversationLayer{
 			RecentRounds:     make([]*ConversationRound, 0),
 			SummaryContent:   "",
@@ -148,14 +155,17 @@ func (a *Agent) buildSystemPrompt() string {
 
 // makeToolsConfig 创建工具配置
 func (a *Agent) makeToolsConfig() (compose.ToolsNodeConfig, error) {
-	bts := make([]tool.BaseTool, 0)
-	duckDuckGoTool, err := tools.NewDuckDuckGoTool()
-	if err != nil {
-		return compose.ToolsNodeConfig{}, fmt.Errorf("failed to create duckduckgo tool: %w", err)
+	// 从全局注册表获取所有工具
+	bts := tools.GlobalRegistry.List()
+
+	// 如果没有注册任何工具，注册内置工具
+	if len(bts) == 0 {
+		ctx := context.Background()
+		if err := tools.RegisterBuiltinTools(ctx); err != nil {
+			return compose.ToolsNodeConfig{}, fmt.Errorf("注册内置工具失败: %w", err)
+		}
+		bts = tools.GlobalRegistry.List()
 	}
-	bts = append(bts, duckDuckGoTool)
-	// 添加 HTTP 客户端工具
-	bts = append(bts, &tools.HTTPClientTool{})
 
 	return compose.ToolsNodeConfig{
 		Tools: bts,

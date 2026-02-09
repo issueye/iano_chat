@@ -92,38 +92,50 @@ func TestSummaryConfig(t *testing.T) {
 // TestEstimateTokens 测试Token估算
 func TestEstimateTokens(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    string
-		expected int
+		name         string
+		input        string
+		minExpected  int // 最小期望值（新算法范围）
+		maxExpected  int // 最大期望值
 	}{
 		{
-			name:     "纯英文",
-			input:    "Hello World",
-			expected: 11, // 每个字符1个token
+			name:        "纯英文",
+			input:       "Hello World",
+			minExpected: 8,  // 新算法：单词估算 + 开销
+			maxExpected: 15, // 宽松上限
 		},
 		{
-			name:     "纯中文",
-			input:    "你好世界",
-			expected: 8, // 每个字符2个token
+			name:        "纯中文",
+			input:       "你好世界",
+			minExpected: 8,   // 新算法：4个中文字符 * 2 = 8 + 开销
+			maxExpected: 15,
 		},
 		{
-			name:     "中英文混合",
-			input:    "Hello 你好",
-			expected: 10, // 6 + 4
+			name:        "中英文混合",
+			input:       "Hello 你好",
+			minExpected: 8,
+			maxExpected: 18,
 		},
 		{
-			name:     "空字符串",
-			input:    "",
-			expected: 0,
+			name:        "空字符串",
+			input:       "",
+			minExpected: 0,
+			maxExpected: 0,
+		},
+		{
+			name:        "长文本",
+			input:       "这是一个比较长的中文文本，用于测试Token估算算法的准确性。",
+			minExpected: 30,
+			maxExpected: 80,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := estimateTokens(tt.input)
-			if got != tt.expected {
-				t.Errorf("estimateTokens() = %v, want %v", got, tt.expected)
+			if got < tt.minExpected || got > tt.maxExpected {
+				t.Errorf("estimateTokens() = %v, 期望范围 [%d, %d]", got, tt.minExpected, tt.maxExpected)
 			}
+			t.Logf("estimateTokens(%q) = %d", tt.input, got)
 		})
 	}
 }

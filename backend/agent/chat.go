@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iano_chat/agent/tools"
 	"io"
 	"log/slog"
 	"time"
 
+	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/flow/agent"
 	"github.com/cloudwego/eino/flow/agent/react"
@@ -42,27 +44,20 @@ type ConversationRound struct {
 	TokenCount       int
 }
 
-// estimateTokens 估算token数量（简单估算：中文字符算2个token，英文算1个）
-func estimateTokens(text string) int {
-	tokens := 0
-	for _, r := range text {
-		if r > 127 {
-			tokens += 2
-		} else {
-			tokens += 1
-		}
-	}
-	return tokens
-}
-
 // Chat 执行对话（流式）
 func (a *Agent) Chat(ctx context.Context, userInput string) (string, error) {
+	// 第一阶段：准备数据（加锁）
 	a.mu.Lock()
-	defer a.mu.Unlock()
 
 	// 检查是否需要摘要
 	if err := a.checkAndSummarize(ctx); err != nil {
 		slog.Error("摘要检查失败", slog.String("error", err.Error()))
+	}
+
+	// 检查是否超过最大对话轮数
+	if len(a.conversation.RecentRounds) >= a.maxRounds {
+		a.mu.Unlock()
+		return "", fmt.Errorf("超过最大对话轮数 %d", a.maxRounds)
 	}
 
 	// 添加用户消息到当前轮
@@ -75,7 +70,12 @@ func (a *Agent) Chat(ctx context.Context, userInput string) (string, error) {
 
 	opts := a.MakeStreamOpts()
 
-	// 执行对话
+	// 获取回调函数的副本，避免在流式处理期间持有锁
+	callback := a.config.Callback
+
+	a.mu.Unlock()
+
+	// 第二阶段：执行流式对话（无锁）
 	msgReader, err := a.ra.Stream(ctx, []*schema.Message{userMsg}, opts...)
 	if err != nil {
 		return "", fmt.Errorf("流式对话失败: %w", err)
@@ -104,17 +104,16 @@ func (a *Agent) Chat(ctx context.Context, userInput string) (string, error) {
 		if msg.Content != "" {
 			fullResponse += msg.Content
 
-			// 调用回调函数
-			if a.config.Callback != nil {
-				a.config.Callback(msg.Content, isToolCall)
+			// 调用回调函数（使用副本，无需锁）
+			if callback != nil {
+				callback(msg.Content, isToolCall)
 			}
 		}
-
-		// 检查是否超过最大对话轮数
-		if len(a.conversation.RecentRounds) > a.maxRounds {
-			return "", fmt.Errorf("超过最大对话轮数 %d", a.maxRounds)
-		}
 	}
+
+	// 第三阶段：更新状态（加锁）
+	a.mu.Lock()
+	defer a.mu.Unlock()
 
 	// 完成当前轮
 	currentRound.AssistantMessage = schema.AssistantMessage(fullResponse, nil)
@@ -174,11 +173,26 @@ func (a *Agent) MakeStreamOpts() []agent.AgentOption {
 }
 
 // AddTool 动态添加工具
-func (a *Agent) AddTool(t Tool) error {
+func (a *Agent) AddTool(name string, t tool.BaseTool) error {
+	return a.AddToolToRegistry(name, t)
+}
+
+// AddToolToRegistry 添加工具到注册表并刷新 Agent
+func (a *Agent) AddToolToRegistry(name string, t tool.BaseTool) error {
+	if name == "" {
+		return fmt.Errorf("工具名称不能为空")
+	}
+	if t == nil {
+		return fmt.Errorf("工具实例不能为空")
+	}
+
+	// 注册到全局注册表
+	if err := tools.GlobalRegistry.Register(name, t); err != nil {
+		return fmt.Errorf("注册工具失败: %w", err)
+	}
+
 	a.mu.Lock()
 	defer a.mu.Unlock()
-
-	a.config.Tools = append(a.config.Tools, t)
 
 	// 重新创建 agent 以应用新工具
 	toolsConfig, err := a.makeToolsConfig()
@@ -198,6 +212,40 @@ func (a *Agent) AddTool(t Tool) error {
 
 	a.ra = ra
 	return nil
+}
+
+// RemoveTool 从注册表移除工具
+func (a *Agent) RemoveTool(name string) error {
+	if err := tools.GlobalRegistry.Unregister(name); err != nil {
+		return fmt.Errorf("注销工具失败: %w", err)
+	}
+
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	// 重新创建 agent 以应用变更
+	toolsConfig, err := a.makeToolsConfig()
+	if err != nil {
+		return fmt.Errorf("创建工具配置失败: %w", err)
+	}
+
+	ctx := context.Background()
+	ra, err := react.NewAgent(ctx, &react.AgentConfig{
+		ToolCallingModel: a.chatModel,
+		ToolsConfig:      toolsConfig,
+		MessageModifier:  a.messageModifier,
+	})
+	if err != nil {
+		return fmt.Errorf("创建代理失败: %w", err)
+	}
+
+	a.ra = ra
+	return nil
+}
+
+// ListTools 列出所有已注册的工具
+func (a *Agent) ListTools() []string {
+	return tools.GlobalRegistry.Names()
 }
 
 // GetConversationInfo 获取对话信息统计
