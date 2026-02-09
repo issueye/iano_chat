@@ -37,6 +37,13 @@ func (t *DuckDuckGoTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 	return &schema.ToolInfo{
 		Name: "web_search",
 		Desc: "用于搜索互联网",
+		ParamsOneOf: schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{
+			"query": {
+				Type:     schema.String,
+				Desc:     "搜索查询",
+				Required: true,
+			},
+		}),
 	}, nil
 }
 
