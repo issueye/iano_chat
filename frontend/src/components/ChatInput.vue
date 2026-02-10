@@ -12,7 +12,7 @@
             <Button
               variant="ghost"
               size="icon"
-              class="flex-shrink-0 rounded-xl hover:bg-muted transition-colors h-9 w-9 sm:h-10 sm:w-10"
+              class="shrink-0 rounded-xl hover:bg-muted transition-colors h-9 w-9 sm:h-10 sm:w-10"
             >
               <Paperclip class="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
             </Button>
