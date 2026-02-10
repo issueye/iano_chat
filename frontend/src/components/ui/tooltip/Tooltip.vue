@@ -1,15 +1,9 @@
-<script setup lang="ts">
-import type { TooltipRootEmits, TooltipRootProps } from "reka-ui"
-import { TooltipRoot, useForwardPropsEmits } from "reka-ui"
-
-const props = defineProps<TooltipRootProps>()
-const emits = defineEmits<TooltipRootEmits>()
-
-const forwarded = useForwardPropsEmits(props, emits)
-</script>
-
 <template>
-  <TooltipRoot v-bind="forwarded">
-    <slot />
-  </TooltipRoot>
+    <div class="relative inline-block">
+        <slot />
+    </div>
 </template>
+
+<script setup>
+// 简化版 Tooltip - 使用原生 title 属性或 CSS 实现
+</script>

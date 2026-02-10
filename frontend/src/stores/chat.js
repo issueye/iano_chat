@@ -1,6 +1,17 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
+const API_BASE = '/api'
+
+function parseResponse(response) {
+  return response.json().then(data => {
+    if (data.code !== 200) {
+      throw new Error(data.message || '请求失败')
+    }
+    return data.data
+  })
+}
+
 export const useChatStore = defineStore('chat', () => {
   // State
   const messages = ref([])
@@ -11,11 +22,11 @@ export const useChatStore = defineStore('chat', () => {
 
   // Getters
   const currentMessages = computed(() => {
-    return messages.value.filter(m => m.session_id === currentSessionId.value)
+    return messages.value.filter(m => String(m.session_id) === String(currentSessionId.value))
   })
 
   const currentSession = computed(() => {
-    return sessions.value.find(s => s.id === currentSessionId.value)
+    return sessions.value.find(s => String(s.id) === String(currentSessionId.value))
   })
 
   // Actions
@@ -25,15 +36,15 @@ export const useChatStore = defineStore('chat', () => {
 
   function addMessage(message) {
     messages.value.push({
-      id: Date.now().toString(),
-      session_id: currentSessionId.value,
-      created_at: new Date().toISOString(),
+      id: message.id || Date.now().toString(),
+      session_id: message.session_id || currentSessionId.value,
+      created_at: message.created_at || new Date().toISOString(),
       ...message
     })
   }
 
   function updateMessage(id, updates) {
-    const index = messages.value.findIndex(m => m.id === id)
+    const index = messages.value.findIndex(m => String(m.id) === String(id))
     if (index !== -1) {
       messages.value[index] = { ...messages.value[index], ...updates }
     }
@@ -51,13 +62,17 @@ export const useChatStore = defineStore('chat', () => {
     error.value = null
   }
 
-  // API Actions
+  function clearCurrentSession() {
+    messages.value = messages.value.filter(m => String(m.session_id) !== String(currentSessionId.value))
+  }
+
+  // Session API
   async function fetchSessions() {
     try {
-      const response = await fetch('/api/sessions')
+      const response = await fetch(`${API_BASE}/sessions`)
       const data = await response.json()
       if (data.code === 200) {
-        sessions.value = data.data
+        sessions.value = data.data || []
       }
     } catch (err) {
       error.value = err.message
@@ -66,7 +81,7 @@ export const useChatStore = defineStore('chat', () => {
 
   async function createSession(title) {
     try {
-      const response = await fetch('/api/sessions', {
+      const response = await fetch(`${API_BASE}/sessions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -75,10 +90,46 @@ export const useChatStore = defineStore('chat', () => {
         })
       })
       const data = await response.json()
-      if (data.code === 201) {
+      if (data.code === 200) {
         sessions.value.unshift(data.data)
         currentSessionId.value = data.data.id
         return data.data
+      }
+    } catch (err) {
+      error.value = err.message
+    }
+  }
+
+  async function switchSession(sessionId) {
+    currentSessionId.value = sessionId
+    await fetchMessagesBySession(sessionId)
+  }
+
+  async function deleteSession(sessionId) {
+    try {
+      const response = await fetch(`${API_BASE}/sessions/${sessionId}`, {
+        method: 'DELETE'
+      })
+      const data = await response.json()
+      if (data.code === 200) {
+        sessions.value = sessions.value.filter(s => String(s.id) !== String(sessionId))
+        if (String(currentSessionId.value) === String(sessionId)) {
+          currentSessionId.value = null
+          messages.value = []
+        }
+      }
+    } catch (err) {
+      error.value = err.message
+    }
+  }
+
+  // Message API
+  async function fetchMessagesBySession(sessionId) {
+    try {
+      const response = await fetch(`${API_BASE}/messages/session?session_id=${sessionId}`)
+      const data = await response.json()
+      if (data.code === 200) {
+        messages.value = data.data || []
       }
     } catch (err) {
       error.value = err.message
@@ -90,90 +141,26 @@ export const useChatStore = defineStore('chat', () => {
       await createSession()
     }
 
-    // Add user message
     const userMessage = {
+      session_id: String(currentSessionId.value),
+      key_id: 'default',
       type: 'user',
       content: JSON.stringify({ text: content }),
       status: 'completed'
     }
-    addMessage(userMessage)
-
-    setLoading(true)
-    clearError()
 
     try {
-      // Create assistant message placeholder
-      const assistantMessage = {
-        type: 'assistant',
-        content: JSON.stringify({ text: '' }),
-        status: 'streaming'
-      }
-      addMessage(assistantMessage)
-      const assistantMessageId = messages.value[messages.value.length - 1].id
-
-      // Call API
-      const response = await fetch('/api/chat', {
+      const response = await fetch(`${API_BASE}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: currentSessionId.value,
-          message: content
-        })
+        body: JSON.stringify(userMessage)
       })
-
-      if (!response.ok) {
-        throw new Error('Failed to send message')
+      const data = await response.json()
+      if (data.code === 200) {
+        messages.value.push(data.data)
       }
-
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let fullContent = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split('\n')
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6)
-            if (data === '[DONE]') {
-              updateMessage(assistantMessageId, {
-                status: 'completed'
-              })
-              break
-            }
-            try {
-              const parsed = JSON.parse(data)
-              if (parsed.content) {
-                fullContent += parsed.content
-                updateMessage(assistantMessageId, {
-                  content: JSON.stringify({ text: fullContent })
-                })
-              }
-            } catch (e) {
-              // Ignore parse errors
-            }
-          }
-        }
-      }
-
-      updateMessage(assistantMessageId, {
-        status: 'completed',
-        content: JSON.stringify({ text: fullContent })
-      })
-
     } catch (err) {
       error.value = err.message
-      // Update last message to failed status
-      const lastMessage = messages.value[messages.value.length - 1]
-      if (lastMessage && lastMessage.type === 'assistant') {
-        updateMessage(lastMessage.id, { status: 'failed' })
-      }
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -191,8 +178,12 @@ export const useChatStore = defineStore('chat', () => {
     setLoading,
     setError,
     clearError,
+    clearCurrentSession,
     fetchSessions,
     createSession,
+    switchSession,
+    deleteSession,
+    fetchMessagesBySession,
     sendMessage
   }
 })

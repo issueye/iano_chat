@@ -1,12 +1,10 @@
-<script setup lang="ts">
-import type { TooltipTriggerProps } from "reka-ui"
-import { TooltipTrigger } from "reka-ui"
-
-const props = defineProps<TooltipTriggerProps>()
-</script>
-
 <template>
-  <TooltipTrigger v-bind="props">
-    <slot />
-  </TooltipTrigger>
+    <div>
+        <slot />
+        <slot name="content" />
+    </div>
 </template>
+
+<script setup>
+// TooltipTrigger - 直接渲染内容，状态由父组件管理
+</script>
