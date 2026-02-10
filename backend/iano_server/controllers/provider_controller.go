@@ -2,8 +2,8 @@ package controllers
 
 import (
 	"iano_server/models"
-	"iano_server/pkg/web"
 	"iano_server/services"
+	web "iano_web"
 	"net/http"
 )
 

@@ -5,7 +5,7 @@ package controllers
 
 import (
 	"iano_server/models"
-	"iano_server/pkg/web"
+	web "iano_web"
 	"iano_server/services"
 	"net/http"
 	"strconv"
