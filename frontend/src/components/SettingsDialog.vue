@@ -8,7 +8,7 @@
                 <DialogDescription>管理您的供应商、Agents 和 Tools 配置</DialogDescription>
             </DialogHeader>
 
-            <div class="flex w-full h-full">
+            <div class="flex sm:w-48 min-h-[calc(90vh-4rem)] min-w-[70%]">
                 <div class="w-48 border-r border-border pr-4 flex flex-col flex-shrink-0">
                     <div class="mb-4 px-1">
                         <h2 class="font-semibold text-sm text-foreground">设置</h2>
