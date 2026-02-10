@@ -1,9 +1,18 @@
 <template>
-    <p class="text-sm text-muted-foreground">
+    <p :class="['text-sm text-muted-foreground', customClass]">
         <slot />
     </p>
 </template>
 
 <script setup>
-// DialogDescription 直接使用 p，不需要 reka-ui
+import { computed } from 'vue';
+
+const props = defineProps({
+    class: {
+        type: String,
+        default: '',
+    },
+});
+
+const customClass = computed(() => props.class);
 </script>

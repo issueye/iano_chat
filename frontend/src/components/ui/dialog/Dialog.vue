@@ -1,11 +1,11 @@
 <template>
-    <DialogRoot :open="open" @update:open="handleOpenChange">
+    <div>
         <slot />
-    </DialogRoot>
+    </div>
 </template>
 
 <script setup>
-import { DialogRoot } from "reka-ui";
+import { provide, computed } from 'vue';
 
 const props = defineProps({
     open: {
@@ -14,9 +14,19 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(["update:open"]);
+const emit = defineEmits(['update:open']);
 
-function handleOpenChange(value) {
-    emit("update:open", value);
+const isOpen = computed({
+    get: () => props.open,
+    set: (value) => emit('update:open', value),
+});
+
+function closeModal() {
+    isOpen.value = false;
 }
+
+provide('dialog', {
+    isOpen,
+    closeModal,
+});
 </script>

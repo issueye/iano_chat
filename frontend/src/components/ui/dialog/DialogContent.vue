@@ -1,20 +1,55 @@
 <template>
-    <DialogPortal>
-        <DialogOverlay
-            class="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-        />
-        <DialogContent
-            class="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg"
+    <Teleport to="body">
+        <Transition
+            enter-active-class="transition-all duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition-all duration-200 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
         >
-            <slot />
-        </DialogContent>
-    </DialogPortal>
+            <div
+                v-if="isOpen"
+                class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+            >
+                <Transition
+                    enter-active-class="transition-all duration-200 ease-out"
+                    enter-from-class="opacity-0 scale-95 translate-x-[-50%] translate-y-[-48%]"
+                    enter-to-class="opacity-100 scale-100 translate-x-[-50%] translate-y-[-50%]"
+                    leave-active-class="transition-all duration-200 ease-in"
+                    leave-from-class="opacity-100 scale-100 translate-x-[-50%] translate-y-[-50%]"
+                    leave-to-class="opacity-0 scale-95 translate-x-[-50%] translate-y-[-48%]"
+                >
+                    <div
+                        v-if="isOpen"
+                        :class="[
+                            'fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 border bg-background shadow-lg rounded-lg',
+                            customClass,
+                        ]"
+                        @click.stop
+                    >
+                        <slot />
+                    </div>
+                </Transition>
+            </div>
+        </Transition>
+    </Teleport>
 </template>
 
 <script setup>
-import {
-    DialogPortal,
-    DialogOverlay,
-    DialogContent,
-} from "reka-ui";
+import { inject, computed } from 'vue';
+
+const props = defineProps({
+    class: {
+        type: String,
+        default: '',
+    },
+});
+
+const dialog = inject('dialog');
+
+const isOpen = computed(() => dialog?.isOpen?.value ?? false);
+const customClass = computed(() => props.class);
+
+
 </script>
