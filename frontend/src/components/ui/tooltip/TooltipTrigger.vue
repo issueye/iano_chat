@@ -1,10 +1,22 @@
 <template>
-    <div>
+    <div
+        ref="triggerRef"
+        class="relative inline-block"
+        @mouseenter="open = true"
+        @mouseleave="open = false"
+        @focusin="open = true"
+        @focusout="open = false"
+    >
         <slot />
-        <slot name="content" />
     </div>
 </template>
 
 <script setup>
-// TooltipTrigger - 直接渲染内容，状态由父组件管理
+import { ref, provide, watch } from 'vue';
+
+const open = ref(false);
+const triggerRef = ref(null);
+
+provide('tooltipOpen', open);
+provide('tooltipTrigger', triggerRef);
 </script>

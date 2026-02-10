@@ -3,5 +3,5 @@
 </template>
 
 <script setup>
-// TooltipProvider - 用于提供上下文
+// Provider - 仅作为作用域插槽的容器
 </script>
