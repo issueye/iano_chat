@@ -4,9 +4,9 @@
 package controllers
 
 import (
-	"iano_chat/models"
-	"iano_chat/pkg/web"
-	"iano_chat/services"
+	"iano_server/models"
+	"iano_server/pkg/web"
+	"iano_server/services"
 	"net/http"
 	"strconv"
 )

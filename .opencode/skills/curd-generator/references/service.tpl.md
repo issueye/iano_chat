@@ -4,7 +4,7 @@
 package services
 
 import (
-	"iano_chat/models"
+	"iano_server/models"
 
 	"gorm.io/gorm"
 )

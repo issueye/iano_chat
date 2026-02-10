@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
+	web "iano_web"
 	"log"
-	"iano_chat/pkg/web"
 	"net/http"
 	"time"
 )

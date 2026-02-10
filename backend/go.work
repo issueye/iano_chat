@@ -1,0 +1,7 @@
+go 1.24.11
+
+use (
+    ./iano_server
+    ./iano_agent
+    ./iano_web
+)
