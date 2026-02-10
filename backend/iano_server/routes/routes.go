@@ -2,19 +2,20 @@ package routes
 
 import (
 	"iano_server/controllers"
-	"iano_server/pkg/web"
-	"iano_server/pkg/web/middleware"
 	"iano_server/services"
+	web "iano_web"
+	webMiddleware "iano_web/middleware"
 
 	"gorm.io/gorm"
 )
 
 func SetupRoutes(db *gorm.DB) *web.Engine {
 	engine := web.New()
+	engine.SetMode("debug") // 启用 debug 模式
 
-	engine.Use(middleware.Recovery())
-	engine.Use(middleware.Logger())
-	engine.Use(middleware.CORS())
+	engine.Use(webMiddleware.Recovery())
+	engine.Use(webMiddleware.Logger())
+	engine.Use(webMiddleware.CORS())
 
 	agentService := services.NewAgentService(db)
 	agentController := controllers.NewAgentController(agentService)

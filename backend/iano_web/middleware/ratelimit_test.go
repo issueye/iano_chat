@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"iano_server/pkg/web"
+	web "iano_web"
 )
 
 func clearRateLimiters() {

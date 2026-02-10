@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"iano_server/pkg/web"
+	web "iano_web"
 )
 
 // CORSConfig CORS 配置

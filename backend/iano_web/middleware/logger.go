@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"iano_server/pkg/web"
+	web "iano_web"
 )
 
 // LoggerConfig 日志配置

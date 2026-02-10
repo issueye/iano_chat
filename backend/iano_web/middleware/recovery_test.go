@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"iano_server/pkg/web"
+	web "iano_web"
 )
 
 func TestRecovery(t *testing.T) {

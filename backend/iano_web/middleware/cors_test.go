@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"iano_server/pkg/web"
+	web "iano_web"
 )
 
 func TestCORS(t *testing.T) {

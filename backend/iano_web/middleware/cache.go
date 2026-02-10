@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"iano_server/pkg/web"
+	web "iano_web"
 )
 
 // CacheEntry 缓存条目

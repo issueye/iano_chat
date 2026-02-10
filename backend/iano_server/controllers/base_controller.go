@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"iano_server/models"
-	"iano_server/pkg/web"
+	web "iano_web"
 )
 
 type BaseController struct{}

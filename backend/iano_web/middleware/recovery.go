@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"runtime/debug"
 
-	"iano_server/pkg/web"
+	web "iano_web"
 )
 
 // RecoveryConfig 恢复配置

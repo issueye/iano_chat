@@ -18,6 +18,7 @@ type Engine struct {
 	graceful     bool
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
+	mode         string // debug or release
 }
 
 func New() *Engine {
@@ -129,7 +130,11 @@ func (e *Engine) Run(addr string) error {
 		return e.runWithGracefulShutdown(addr)
 	}
 
-	fmt.Printf("Server starting on %s\n", addr)
+	if e.mode == "debug" {
+		e.PrintRoutes()
+	}
+
+	fmt.Printf("服务 %s 启动中...\n", addr)
 	return e.engine.ListenAndServe()
 }
 
@@ -137,9 +142,13 @@ func (e *Engine) runWithGracefulShutdown(addr string) error {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
+	if e.mode == "debug" {
+		e.PrintRoutes()
+	}
+
 	serverErr := make(chan error, 1)
 	go func() {
-		fmt.Printf("Server starting on %s (with graceful shutdown)\n", addr)
+		fmt.Printf("服务 %s 启动中...\n", addr)
 		serverErr <- e.engine.ListenAndServe()
 	}()
 
@@ -148,7 +157,7 @@ func (e *Engine) runWithGracefulShutdown(addr string) error {
 		return err
 	case sig := <-quit:
 		fmt.Printf("\nReceived signal: %v\n", sig)
-		fmt.Println("Shutting down server...")
+		fmt.Printf("服务 %s 关闭中...\n", addr)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
@@ -157,7 +166,7 @@ func (e *Engine) runWithGracefulShutdown(addr string) error {
 			return fmt.Errorf("server forced to shutdown: %w", err)
 		}
 
-		fmt.Println("Server gracefully stopped")
+		fmt.Printf("服务 %s 已正常关闭\n", addr)
 		return nil
 	}
 }
@@ -174,6 +183,10 @@ func (e *Engine) RunTLS(addr, certFile, keyFile string) error {
 		return e.runTLSWithGracefulShutdown(addr, certFile, keyFile)
 	}
 
+	if e.mode == "debug" {
+		e.PrintRoutes()
+	}
+
 	fmt.Printf("Server starting on %s with TLS\n", addr)
 	return e.engine.ListenAndServeTLS(certFile, keyFile)
 }
@@ -182,9 +195,13 @@ func (e *Engine) runTLSWithGracefulShutdown(addr, certFile, keyFile string) erro
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
+	if e.mode == "debug" {
+		e.PrintRoutes()
+	}
+
 	serverErr := make(chan error, 1)
 	go func() {
-		fmt.Printf("Server starting on %s with TLS (with graceful shutdown)\n", addr)
+		fmt.Printf("服务 %s 启动中...\n", addr)
 		serverErr <- e.engine.ListenAndServeTLS(certFile, keyFile)
 	}()
 
@@ -193,16 +210,16 @@ func (e *Engine) runTLSWithGracefulShutdown(addr, certFile, keyFile string) erro
 		return err
 	case sig := <-quit:
 		fmt.Printf("\nReceived signal: %v\n", sig)
-		fmt.Println("Shutting down server...")
+		fmt.Printf("服务 %s 关闭中...\n", addr)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		if err := e.engine.Shutdown(ctx); err != nil {
-			return fmt.Errorf("server forced to shutdown: %w", err)
+			return fmt.Errorf("服务 %s 关闭失败: %w", addr, err)
 		}
 
-		fmt.Println("Server gracefully stopped")
+		fmt.Printf("服务 %s 已正常关闭\n", addr)
 		return nil
 	}
 }
@@ -226,4 +243,21 @@ func (e *Engine) SetWriteTimeout(timeout time.Duration) {
 
 func (e *Engine) SetGracefulShutdown(enable bool) {
 	e.graceful = enable
+}
+
+func (e *Engine) SetMode(mode string) {
+	e.mode = mode
+}
+
+// Start 在使用 http.ListenAndServe 前调用，用于触发 debug 模式下的路由打印
+func (e *Engine) Start() {
+	if e.mode == "debug" {
+		e.PrintRoutes()
+	}
+}
+
+func (e *Engine) PrintRoutes() {
+	fmt.Println("\n========== 已注册路由 ==========")
+	e.router.printRoutes("/", e.router.trie.root)
+	fmt.Println("=======================================")
 }

@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -138,4 +139,30 @@ func (r *Router) handleRequest(c *Context) {
 	c.Params = params
 	c.handlers = matchedRoute.handlers
 	c.Next()
+}
+
+func (r *Router) printRoutes(prefix string, node *trieNode) {
+	if node == nil {
+		return
+	}
+
+	for method := range node.routes {
+		fmt.Printf("%-7s %s\n", method, prefix)
+	}
+
+	for part, child := range node.children {
+		if prefix == "/" {
+			r.printRoutes("/"+part, child)
+		} else {
+			r.printRoutes(prefix+"/"+part, child)
+		}
+	}
+
+	if node.paramChild != nil {
+		if prefix == "/" {
+			r.printRoutes("/:"+node.paramChild.paramName, node.paramChild)
+		} else {
+			r.printRoutes(prefix+"/"+":"+node.paramChild.paramName, node.paramChild)
+		}
+	}
 }

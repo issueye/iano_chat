@@ -5,9 +5,9 @@ import (
 	"iano_server/pkg/config"
 	"iano_server/pkg/database"
 	"iano_server/pkg/logger"
-	"iano_server/pkg/web"
 	"iano_server/routes"
 	"iano_server/services"
+	web "iano_web"
 	"log/slog"
 	"net/http"
 	"os"
@@ -108,6 +108,7 @@ func (a *App) InitRootDirs() error {
 func (a *App) Start() error {
 	a.AgentService = services.NewAgentService(a.DB)
 	a.WebEngine = routes.SetupRoutes(a.DB)
+	a.WebEngine.Start() // 如果是 debug 模式，会打印路由信息
 	a.Log.Info("服务启动", slog.String("port", a.cfg.Server.Port))
 	if err := http.ListenAndServe(":"+a.cfg.Server.Port, a.WebEngine); err != nil {
 		a.Log.Error("服务启动失败", slog.String("error", err.Error()))
