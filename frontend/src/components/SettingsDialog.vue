@@ -1,7 +1,7 @@
 <template>
     <Dialog :open="open" @update:open="handleOpenChange">
         <DialogContent
-            class="sm:max-w-[700px] max-h-[85vh] overflow-hidden flex bg-card"
+            class="sm:max-w-[1200px] max-w-[95vw] max-h-[90vh] overflow-hidden flex bg-card"
         >
             <DialogHeader class="sr-only">
                 <DialogTitle>设置</DialogTitle>

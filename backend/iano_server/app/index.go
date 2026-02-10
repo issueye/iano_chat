@@ -68,6 +68,7 @@ func (a *App) InitDB() error {
 		&models.Session{},
 		&models.Message{},
 		&models.Agent{},
+		&models.Tool{},
 	)
 }
 
