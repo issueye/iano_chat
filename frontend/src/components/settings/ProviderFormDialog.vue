@@ -1,7 +1,7 @@
 <template>
     <Dialog :open="open" @update:open="handleOpenChange">
-        <DialogContent v-if="open" class="sm:max-w-[500px]" data-dialog="provider-form">
-            <DialogTitle>{{ isEdit ? '编辑供应商' : '添加供应商' }}</DialogTitle>
+        <DialogContent class="sm:max-w-[500px]" data-dialog="provider-form">
+            <DialogTitle>{{ dialogTitle }}</DialogTitle>
             <form @submit.prevent="handleSubmit" class="space-y-4 p-6">
                 <div class="space-y-2">
                     <Label for="name">名称</Label>
@@ -92,6 +92,7 @@ const props = defineProps({
 const emit = defineEmits(['update:open', 'submit', 'success']);
 
 const submitting = ref(false);
+const currentProviderId = ref(null);
 
 const defaultForm = {
     name: '',
@@ -104,10 +105,35 @@ const defaultForm = {
 
 const form = ref({ ...defaultForm });
 
-const isEdit = computed(() => !!props.provider?.id);
+const isEdit = computed(() => !!currentProviderId.value);
+const dialogTitle = computed(() => isEdit.value ? '编辑供应商' : '添加供应商');
 
+// 监听 open 变化，当弹窗打开时初始化表单
+watch(() => props.open, (isOpen) => {
+    if (isOpen) {
+        // 弹窗打开时，根据 provider 初始化表单
+        console.log('props.provider', props.provider);
+        if (props.provider && props.provider.id) {
+            currentProviderId.value = props.provider.id;
+            form.value = {
+                name: props.provider.name || '',
+                base_url: props.provider.base_url || '',
+                api_key: props.provider.api_key || '',
+                model: props.provider.model || '',
+                temperature: props.provider.temperature ?? 0.7,
+                max_tokens: props.provider.max_tokens || 4096,
+            };
+        } else {
+            currentProviderId.value = null;
+            form.value = { ...defaultForm };
+        }
+    }
+}, { immediate: true });
+
+// 监听 provider 变化（当弹窗已经打开时）
 watch(() => props.provider, (newProvider) => {
-    if (newProvider) {
+    if (props.open && newProvider) {
+        currentProviderId.value = newProvider.id;
         form.value = {
             name: newProvider.name || '',
             base_url: newProvider.base_url || '',
@@ -116,59 +142,49 @@ watch(() => props.provider, (newProvider) => {
             temperature: newProvider.temperature ?? 0.7,
             max_tokens: newProvider.max_tokens || 4096,
         };
-    } else {
-        form.value = { ...defaultForm };
     }
-}, { immediate: true });
+}, { deep: true });
 
 function handleOpenChange(value) {
-    console.log('ProviderFormDialog handleOpenChange called with:', value);
     emit('update:open', value);
-    console.log('ProviderFormDialog emitted update:open with:', value);
     if (!value) {
-        form.value = { ...defaultForm };
+        // 弹窗关闭时重置状态
+        setTimeout(() => {
+            currentProviderId.value = null;
+            form.value = { ...defaultForm };
+        }, 200);
     }
 }
 
 function handleCancel() {
     emit('update:open', false);
-    form.value = { ...defaultForm };
+    setTimeout(() => {
+        currentProviderId.value = null;
+        form.value = { ...defaultForm };
+    }, 200);
 }
 
 async function handleSubmit() {
     submitting.value = true;
     try {
         const url = isEdit.value
-            ? `/api/providers/${props.provider.id}`
+            ? `/api/providers/${currentProviderId.value}`
             : '/api/providers';
         const method = isEdit.value ? 'PUT' : 'POST';
-
-        const payload = { ...form.value };
-        if (isEdit.value) {
-            const updates = {};
-            if (payload.name !== props.provider.name) updates.name = payload.name;
-            if (payload.base_url !== props.provider.base_url) updates.base_url = payload.base_url;
-            if (payload.api_key !== props.provider.api_key) updates.api_key = payload.api_key;
-            if (payload.model !== props.provider.model) updates.model = payload.model;
-            if (payload.temperature !== props.provider.temperature) updates.temperature = payload.temperature;
-            if (payload.max_tokens !== props.provider.max_tokens) updates.max_tokens = payload.max_tokens;
-            
-            if (Object.keys(updates).length === 0) {
-                emit('update:open', false);
-                return;
-            }
-        }
 
         const response = await fetch(url, {
             method,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(isEdit.value ? payload : payload),
+            body: JSON.stringify(form.value),
         });
 
         if (response.ok) {
             emit('success');
             emit('update:open', false);
-            form.value = { ...defaultForm };
+            setTimeout(() => {
+                currentProviderId.value = null;
+                form.value = { ...defaultForm };
+            }, 200);
         } else {
             const error = await response.json();
             alert(error.message || '操作失败');

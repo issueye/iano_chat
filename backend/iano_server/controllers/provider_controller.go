@@ -49,6 +49,9 @@ func (c *ProviderController) Create(ctx *web.Context) {
 		MaxTokens:   req.MaxTokens,
 	}
 
+	// 生成ID
+	provider.NewID()
+
 	if err := c.providerService.Create(provider); err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
 		return
@@ -100,10 +103,16 @@ func (c *ProviderController) Update(ctx *web.Context) {
 		updates["model"] = *req.Model
 	}
 	if req.Temperature != nil {
-		updates["temperature"] = *req.Temperature
+		updates["temperature"] = models.NullFloat32{
+			Float32: *req.Temperature,
+			Valid:   *req.Temperature != 0,
+		}
 	}
 	if req.MaxTokens != nil {
-		updates["max_tokens"] = *req.MaxTokens
+		updates["max_tokens"] = models.NullInt{
+			Int:   *req.MaxTokens,
+			Valid: *req.MaxTokens != 0,
+		}
 	}
 
 	provider, err := c.providerService.Update(id, updates)

@@ -1,7 +1,5 @@
 package models
 
-import "time"
-
 // AgentType Agent 类型
 type AgentType string
 
@@ -22,8 +20,6 @@ type Agent struct {
 	Model        string    `json:"model"`
 	Instructions string    `gorm:"type:text" json:"instructions"`
 	Tools        string    `gorm:"type:text" json:"tools"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 func (Agent) TableName() string {

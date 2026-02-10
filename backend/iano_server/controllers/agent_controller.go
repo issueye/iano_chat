@@ -55,6 +55,8 @@ func (c *AgentController) Create(ctx *web.Context) {
 		Tools:        req.Tools,
 	}
 
+	agent.NewID()
+
 	if err := c.agentService.Create(agent); err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
 		return

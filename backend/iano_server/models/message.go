@@ -3,8 +3,6 @@ package models
 import (
 	"encoding/json"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 // MessageType 消息类型
@@ -74,37 +72,12 @@ type Message struct {
 	ParentID        *string         `gorm:"size:36;index" json:"parent_id,omitempty"`
 	FeedbackRating  *FeedbackRating `gorm:"size:10" json:"feedback_rating,omitempty"`
 	FeedbackComment string          `gorm:"type:text" json:"feedback_comment,omitempty"`
-	FeedbackAt      *time.Time      `json:"feedback_at,omitempty"`
+	FeedbackAt      *JSONTime       `json:"feedback_at,omitempty"`
 }
 
 // TableName 返回表名
 func (Message) TableName() string {
 	return "messages"
-}
-
-// BeforeCreate 创建前钩子
-func (m *Message) BeforeCreate(tx *gorm.DB) error {
-	// 调用 BaseModel 的 NewID 生成 UUID
-	if m.ID == "" {
-		m.BaseModel.NewID()
-	}
-	if m.Status == "" {
-		m.Status = MessageStatusCompleted
-	}
-	now := time.Now()
-	if m.CreatedAt.IsZero() {
-		m.CreatedAt = now
-	}
-	if m.UpdatedAt.IsZero() {
-		m.UpdatedAt = now
-	}
-	return nil
-}
-
-// BeforeUpdate 更新前钩子
-func (m *Message) BeforeUpdate(tx *gorm.DB) error {
-	m.UpdatedAt = time.Now()
-	return nil
 }
 
 // GetContent 获取消息内容对象
@@ -132,66 +105,51 @@ func (m *Message) SetContent(content *MessageContent) error {
 	return nil
 }
 
-// SetTextContent 设置纯文本内容
-func (m *Message) SetTextContent(text string) error {
-	return m.SetContent(&MessageContent{Text: text})
-}
-
-// GetTextContent 获取纯文本内容
-func (m *Message) GetTextContent() string {
+// AddToolCall 添加工具调用
+func (m *Message) AddToolCall(toolCall ToolCall) error {
 	content, err := m.GetContent()
 	if err != nil {
-		return ""
+		return err
+	}
+	content.ToolCalls = append(content.ToolCalls, toolCall)
+	return m.SetContent(content)
+}
+
+// GetText 获取文本内容
+func (m *Message) GetText() string {
+	content, err := m.GetContent()
+	if err != nil {
+		return m.Content
 	}
 	return content.Text
 }
 
-// IsUserMessage 是否为用户消息
-func (m *Message) IsUserMessage() bool {
-	return m.Type == MessageTypeUser
+// SetText 设置文本内容
+func (m *Message) SetText(text string) error {
+	content, err := m.GetContent()
+	if err != nil {
+		return err
+	}
+	content.Text = text
+	return m.SetContent(content)
 }
 
-// IsAssistantMessage 是否为 AI 消息
-func (m *Message) IsAssistantMessage() bool {
-	return m.Type == MessageTypeAssistant
-}
-
-// IsSystemMessage 是否为系统消息
-func (m *Message) IsSystemMessage() bool {
-	return m.Type == MessageTypeSystem
-}
-
-// IsToolMessage 是否为工具消息
-func (m *Message) IsToolMessage() bool {
-	return m.Type == MessageTypeTool
-}
-
-// IsStreaming 是否正在流式输出
-func (m *Message) IsStreaming() bool {
-	return m.Status == MessageStatusStreaming
-}
-
-// IsCompleted 是否已完成
-func (m *Message) IsCompleted() bool {
-	return m.Status == MessageStatusCompleted
-}
-
-// IsFailed 是否失败
-func (m *Message) IsFailed() bool {
-	return m.Status == MessageStatusFailed
-}
-
-// GetTotalTokens 获取总 Token 数
-func (m *Message) GetTotalTokens() int {
-	return m.InputTokens + m.OutputTokens
+// AddAttachment 添加附件
+func (m *Message) AddAttachment(attachment Attachment) error {
+	content, err := m.GetContent()
+	if err != nil {
+		return err
+	}
+	content.Attachments = append(content.Attachments, attachment)
+	return m.SetContent(content)
 }
 
 // AddFeedback 添加反馈
 func (m *Message) AddFeedback(rating FeedbackRating, comment string) {
-	now := time.Now()
+	now := PtrJSONTime(time.Now())
 	m.FeedbackRating = &rating
 	m.FeedbackComment = comment
-	m.FeedbackAt = &now
+	m.FeedbackAt = now
 }
 
 // HasFeedback 是否有反馈
@@ -205,25 +163,6 @@ type MessageHistory struct {
 	Content string `json:"content"`
 }
 
-// ToHistory 转换为历史记录格式
-func (m *Message) ToHistory() *MessageHistory {
-	role := ""
-	switch m.Type {
-	case MessageTypeUser:
-		role = "user"
-	case MessageTypeAssistant:
-		role = "assistant"
-	case MessageTypeSystem:
-		role = "system"
-	case MessageTypeTool:
-		role = "tool"
-	}
-	return &MessageHistory{
-		Role:    role,
-		Content: m.GetTextContent(),
-	}
-}
-
 // CreateUserMessage 创建用户消息
 func CreateUserMessage(sessionID string, text string) *Message {
 	msg := &Message{
@@ -232,7 +171,6 @@ func CreateUserMessage(sessionID string, text string) *Message {
 		Status:    MessageStatusCompleted,
 	}
 	msg.NewID()
-	msg.SetTextContent(text)
 	return msg
 }
 
@@ -244,17 +182,5 @@ func CreateAssistantMessage(sessionID string, status MessageStatus) *Message {
 		Status:    status,
 	}
 	msg.NewID()
-	return msg
-}
-
-// CreateSystemMessage 创建系统消息
-func CreateSystemMessage(sessionID string, text string) *Message {
-	msg := &Message{
-		SessionID: sessionID,
-		Type:      MessageTypeSystem,
-		Status:    MessageStatusCompleted,
-	}
-	msg.NewID()
-	msg.SetTextContent(text)
 	return msg
 }

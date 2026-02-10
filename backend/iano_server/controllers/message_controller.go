@@ -54,6 +54,8 @@ func (c *MessageController) Create(ctx *web.Context) {
 		ParentID:  req.ParentID,
 	}
 
+	message.NewID()
+
 	if err := c.messageService.Create(message); err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
 		return

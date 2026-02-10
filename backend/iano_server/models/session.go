@@ -53,9 +53,7 @@ type Session struct {
 	ConfigJSON   string         `gorm:"type:text" json:"-"`
 	MessageCount int            `gorm:"default:0" json:"message_count"`
 	TotalTokens  int            `gorm:"default:0" json:"total_tokens"`
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
-	LastActiveAt time.Time      `json:"last_active_at"`
+	LastActiveAt JSONTime       `json:"last_active_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
@@ -89,47 +87,14 @@ func (s *Session) SetConfig(config *SessionConfig) error {
 	return nil
 }
 
-// BeforeCreate 创建前钩子
-func (s *Session) BeforeCreate(tx *gorm.DB) error {
-	if s.Status == "" {
-		s.Status = SessionStatusActive
-	}
-	if s.Title == "" {
-		s.Title = "新会话"
-	}
-	now := time.Now()
-	if s.CreatedAt.IsZero() {
-		s.CreatedAt = now
-	}
-	if s.UpdatedAt.IsZero() {
-		s.UpdatedAt = now
-	}
-	if s.LastActiveAt.IsZero() {
-		s.LastActiveAt = now
-	}
-	// 设置默认配置
-	if s.ConfigJSON == "" {
-		config := DefaultSessionConfig()
-		data, _ := json.Marshal(config)
-		s.ConfigJSON = string(data)
-	}
-	return nil
-}
-
-// BeforeUpdate 更新前钩子
-func (s *Session) BeforeUpdate(tx *gorm.DB) error {
-	s.UpdatedAt = time.Now()
-	return nil
-}
-
 // SessionSummary 会话摘要（用于列表展示）
 type SessionSummary struct {
-	ID           int64     `json:"id"`
-	Title        string    `json:"title"`
-	Status       string    `json:"status"`
-	MessageCount int       `json:"message_count"`
-	LastActiveAt time.Time `json:"last_active_at"`
-	Preview      string    `json:"preview"`
+	ID           int64    `json:"id"`
+	Title        string   `json:"title"`
+	Status       string   `json:"status"`
+	MessageCount int      `json:"message_count"`
+	LastActiveAt JSONTime `json:"last_active_at"`
+	Preview      string   `json:"preview"`
 }
 
 // ToSummary 转换为摘要
@@ -155,7 +120,7 @@ func (s *Session) CanChat() bool {
 
 // UpdateLastActive 更新最后活跃时间
 func (s *Session) UpdateLastActive() {
-	s.LastActiveAt = time.Now()
+	s.LastActiveAt = JSONTime{Time: time.Now()}
 }
 
 // IncrementMessageCount 增加消息计数

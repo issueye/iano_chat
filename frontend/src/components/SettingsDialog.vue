@@ -67,11 +67,22 @@
         :provider="editingProvider"
         @success="fetchData"
     />
+
+    <AlertDialog
+        v-model:open="deleteDialogOpen"
+        :title="deleteDialogTitle"
+        :description="deleteDialogDescription"
+        confirm-text="删除"
+        cancel-text="取消"
+        variant="destructive"
+        @confirm="executeDelete"
+    />
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import ProvidersPanel from "./settings/ProvidersPanel.vue";
 import AgentsPanel from "./settings/AgentsPanel.vue";
 import ToolsPanel from "./settings/ToolsPanel.vue";
@@ -93,11 +104,50 @@ const tools = ref([]);
 const providerFormOpen = ref(false);
 const editingProvider = ref(null);
 
+// 删除确认对话框状态
+const deleteDialogOpen = ref(false);
+const deleteItem = ref({ name: '' });
+const deleteDialogTitle = computed(() => deleteItem.value?.name ? `删除 ${deleteItem.value.name}` : '删除');
+const deleteDialogDescription = computed(() => deleteItem.value?.name ? `确定要删除 "${deleteItem.value.name}" 吗？此操作无法撤销。` : '确定要删除此项吗？此操作无法撤销。');
+
 const tabs = [
     { value: "providers", label: "供应商", icon: Building2 },
     { value: "agents", label: "Agents", icon: Bot },
     { value: "tools", label: "Tools", icon: Wrench },
 ];
+
+function handleDelete(item) {
+    deleteItem.value = item;
+    deleteDialogOpen.value = true;
+}
+
+async function executeDelete() {
+    if (!deleteItem.value?.id) return;
+    
+    try {
+        const endpoints = {
+            providers: `/api/providers/${deleteItem.value.id}`,
+            agents: `/api/agents/${deleteItem.value.id}`,
+            tools: `/api/tools/${deleteItem.value.id}`,
+        };
+        
+        const response = await fetch(endpoints[activeTab.value], {
+            method: 'DELETE',
+        });
+        
+        if (response.ok) {
+            fetchData();
+        } else {
+            const error = await response.json();
+            alert(error.message || '删除失败');
+        }
+    } catch (error) {
+        console.error('Failed to delete item:', error);
+        alert('删除失败，请检查网络连接');
+    } finally {
+        deleteItem.value = { name: '' };
+    }
+}
 
 function handleOpenChange(value) {
     emit("update:open", value);
@@ -159,9 +209,7 @@ function handleEdit(item) {
     }
 }
 
-function handleDelete(item) {
-    emit("delete", { type: activeTab.value, item });
-}
+
 
 function handleKeyboard(e) {
     if (!props.open) return;

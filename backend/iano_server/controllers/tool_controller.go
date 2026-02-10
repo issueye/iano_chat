@@ -58,6 +58,8 @@ func (c *ToolController) Create(ctx *web.Context) {
 		Author:     req.Author,
 	}
 
+	tool.NewID()
+
 	if err := c.toolService.Create(tool); err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
 		return

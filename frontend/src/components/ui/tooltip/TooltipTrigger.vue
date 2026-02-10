@@ -2,21 +2,29 @@
     <div
         ref="triggerRef"
         class="relative inline-block"
-        @mouseenter="open = true"
-        @mouseleave="open = false"
-        @focusin="open = true"
-        @focusout="open = false"
+        @mouseenter="handleMouseEnter"
+        @mouseleave="handleMouseLeave"
+        @focusin="handleMouseEnter"
+        @focusout="handleMouseLeave"
     >
         <slot />
     </div>
 </template>
 
 <script setup>
-import { ref, provide, watch } from 'vue';
+import { ref, provide } from 'vue';
 
-const open = ref(false);
 const triggerRef = ref(null);
+const isOpen = ref(false);
 
-provide('tooltipOpen', open);
+provide('tooltipOpen', isOpen);
 provide('tooltipTrigger', triggerRef);
+
+function handleMouseEnter() {
+    isOpen.value = true;
+}
+
+function handleMouseLeave() {
+    isOpen.value = false;
+}
 </script>

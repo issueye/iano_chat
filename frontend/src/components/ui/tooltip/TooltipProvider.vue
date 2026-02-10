@@ -1,7 +1,9 @@
 <template>
-    <slot />
+    <div class="relative inline-block">
+        <slot />
+    </div>
 </template>
 
 <script setup>
-// Provider - 仅作为作用域插槽的容器
+// TooltipProvider - no-op, just for API compatibility
 </script>

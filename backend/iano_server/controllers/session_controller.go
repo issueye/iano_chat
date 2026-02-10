@@ -44,6 +44,8 @@ func (c *SessionController) Create(ctx *web.Context) {
 		Status: models.SessionStatusActive,
 	}
 
+	session.NewID()
+
 	if err := c.sessionService.Create(session); err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
 		return

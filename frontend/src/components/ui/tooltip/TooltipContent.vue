@@ -9,7 +9,7 @@
             leave-to-class="opacity-0"
         >
             <div
-                v-if="isOpen"
+                v-if="isOpen && (content || $slots.default)"
                 ref="tooltipRef"
                 :class="[
                     'fixed z-[100] px-2 py-1 text-xs font-medium rounded-md shadow-sm',
@@ -19,7 +19,7 @@
                 ]"
                 :style="tooltipStyle"
             >
-                <slot><p v-if="content">{{ content }}</p></slot>
+                <slot>{{ content }}</slot>
             </div>
         </Transition>
     </Teleport>
@@ -41,6 +41,7 @@ const props = defineProps({
 
 const tooltipRef = ref(null);
 const isOpen = inject('tooltipOpen', ref(false));
+const tooltipTrigger = inject('tooltipTrigger', ref(null));
 
 const tooltipPos = ref({ top: 0, left: 0 });
 
@@ -60,7 +61,10 @@ const tooltipStyle = computed(() => ({
 }));
 
 function updatePosition() {
-    const trigger = document.activeElement;
+    let trigger = tooltipTrigger.value;
+    if (!trigger && document.activeElement && document.activeElement.tagName === 'BUTTON') {
+        trigger = document.activeElement.closest('[ref="triggerRef"]') || document.activeElement;
+    }
     if (!trigger || !tooltipRef.value || !isOpen.value) return;
 
     const triggerRect = trigger.getBoundingClientRect();
