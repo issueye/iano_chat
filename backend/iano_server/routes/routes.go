@@ -25,6 +25,8 @@ func SetupRoutes(db *gorm.DB) *web.Engine {
 	sessionController := controllers.NewSessionController(sessionService)
 	toolService := services.NewToolService(db)
 	toolController := controllers.NewToolController(toolService)
+	providerService := services.NewProviderService(db)
+	providerController := controllers.NewProviderController(providerService)
 	baseController := &controllers.BaseController{}
 
 	engine.GET("/health", func(c *web.Context) {
@@ -67,6 +69,12 @@ func SetupRoutes(db *gorm.DB) *web.Engine {
 	engine.DELETE("/api/sessions", sessionController.DeleteByKeyID)
 	engine.GET("/api/sessions/:id/config", sessionController.GetConfig)
 	engine.PUT("/api/sessions/:id/config", sessionController.UpdateConfig)
+
+	engine.POST("/api/providers", providerController.Create)
+	engine.GET("/api/providers", providerController.GetAll)
+	engine.GET("/api/providers/:id", providerController.GetByID)
+	engine.PUT("/api/providers/:id", providerController.Update)
+	engine.DELETE("/api/providers/:id", providerController.Delete)
 
 	return engine
 }
