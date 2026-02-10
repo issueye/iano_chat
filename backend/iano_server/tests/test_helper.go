@@ -29,6 +29,7 @@ func NewTestDB() (*TestDB, error) {
 
 	// 自动迁移模型
 	err = db.AutoMigrate(
+		&models.APIKey{},
 		&models.Provider{},
 		&models.Session{},
 		&models.Message{},

@@ -50,7 +50,6 @@ func SetupRoutes(db *gorm.DB) *web.Engine {
 	engine.POST("/api/messages", messageController.Create)
 	engine.GET("/api/messages", messageController.GetAll)
 	engine.GET("/api/messages/session", messageController.GetBySessionID)
-	engine.GET("/api/messages/user", messageController.GetByUserID)
 	engine.GET("/api/messages/type", messageController.GetByType)
 	engine.GET("/api/messages/:id", messageController.GetByID)
 	engine.PUT("/api/messages/:id", messageController.Update)
@@ -61,12 +60,11 @@ func SetupRoutes(db *gorm.DB) *web.Engine {
 
 	engine.POST("/api/sessions", sessionController.Create)
 	engine.GET("/api/sessions", sessionController.GetAll)
-	engine.GET("/api/sessions/user", sessionController.GetByUserID)
 	engine.GET("/api/sessions/status", sessionController.GetByStatus)
 	engine.GET("/api/sessions/:id", sessionController.GetByID)
 	engine.PUT("/api/sessions/:id", sessionController.Update)
 	engine.DELETE("/api/sessions/:id", sessionController.Delete)
-	engine.DELETE("/api/sessions", sessionController.DeleteByUserID)
+	engine.DELETE("/api/sessions", sessionController.DeleteByKeyID)
 	engine.GET("/api/sessions/:id/config", sessionController.GetConfig)
 	engine.PUT("/api/sessions/:id/config", sessionController.UpdateConfig)
 

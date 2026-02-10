@@ -18,8 +18,8 @@ func NewSessionController(sessionService *services.SessionService) *SessionContr
 }
 
 type CreateSessionRequest struct {
-	UserID int64  `json:"user_id"`
-	Title  string `json:"title"`
+	KeyID string `json:"key_id"`
+	Title string `json:"title"`
 }
 
 type UpdateSessionRequest struct {
@@ -40,7 +40,6 @@ func (c *SessionController) Create(ctx *web.Context) {
 	}
 
 	session := &models.Session{
-		UserID: req.UserID,
 		Title:  req.Title,
 		Status: models.SessionStatusActive,
 	}
@@ -78,20 +77,14 @@ func (c *SessionController) GetAll(ctx *web.Context) {
 	ctx.JSON(http.StatusOK, models.Success(sessions))
 }
 
-func (c *SessionController) GetByUserID(ctx *web.Context) {
-	userIDStr := ctx.Query("user_id")
-	if userIDStr == "" {
-		ctx.JSON(http.StatusBadRequest, models.Fail("user_id is required"))
+func (c *SessionController) GetByKeyID(ctx *web.Context) {
+	keyIDStr := ctx.Query("key_id")
+	if keyIDStr == "" {
+		ctx.JSON(http.StatusBadRequest, models.Fail("key_id is required"))
 		return
 	}
 
-	userID, err := strconv.ParseInt(userIDStr, 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Fail("invalid user_id"))
-		return
-	}
-
-	sessions, err := c.sessionService.GetByUserID(userID)
+	sessions, err := c.sessionService.GetByKeyID(keyIDStr)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
 		return
@@ -206,20 +199,14 @@ func (c *SessionController) Delete(ctx *web.Context) {
 	ctx.JSON(http.StatusOK, models.Success(map[string]string{"message": "Session deleted successfully"}))
 }
 
-func (c *SessionController) DeleteByUserID(ctx *web.Context) {
-	userIDStr := ctx.Query("user_id")
-	if userIDStr == "" {
-		ctx.JSON(http.StatusBadRequest, models.Fail("user_id is required"))
+func (c *SessionController) DeleteByKeyID(ctx *web.Context) {
+	keyIDStr := ctx.Query("key_id")
+	if keyIDStr == "" {
+		ctx.JSON(http.StatusBadRequest, models.Fail("key_id is required"))
 		return
 	}
 
-	userID, err := strconv.ParseInt(userIDStr, 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Fail("invalid user_id"))
-		return
-	}
-
-	if err := c.sessionService.DeleteByUserID(userID); err != nil {
+	if err := c.sessionService.DeleteByKeyID(keyIDStr); err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
 		return
 	}

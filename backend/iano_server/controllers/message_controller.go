@@ -17,8 +17,8 @@ func NewMessageController(messageService *services.MessageService) *MessageContr
 }
 
 type CreateMessageRequest struct {
-	SessionID int64   `json:"session_id"`
-	UserID    int64   `json:"user_id"`
+	SessionID string  `json:"session_id"`
+	KeyID     string  `json:"key_id"`
 	Type      string  `json:"type"`
 	Content   string  `json:"content"`
 	Status    string  `json:"status"`
@@ -48,7 +48,6 @@ func (c *MessageController) Create(ctx *web.Context) {
 
 	message := &models.Message{
 		SessionID: req.SessionID,
-		UserID:    req.UserID,
 		Type:      models.MessageType(req.Type),
 		Content:   req.Content,
 		Status:    models.MessageStatus(req.Status),
@@ -101,27 +100,6 @@ func (c *MessageController) GetBySessionID(ctx *web.Context) {
 	}
 
 	messages, err := c.messageService.GetBySessionID(sessionID)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
-		return
-	}
-	ctx.JSON(http.StatusOK, models.Success(messages))
-}
-
-func (c *MessageController) GetByUserID(ctx *web.Context) {
-	userIDStr := ctx.Query("user_id")
-	if userIDStr == "" {
-		ctx.JSON(http.StatusBadRequest, models.Fail("user_id is required"))
-		return
-	}
-
-	userID, err := strconv.ParseInt(userIDStr, 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Fail("invalid user_id"))
-		return
-	}
-
-	messages, err := c.messageService.GetByUserID(userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
 		return

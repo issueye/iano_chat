@@ -23,7 +23,6 @@ func TestSessionController(t *testing.T) {
 
 	t.Run("Create Session", func(t *testing.T) {
 		reqBody := `{
-			"user_id": 123,
 			"title": "Test Session",
 			"status": "active"
 		}`
@@ -43,7 +42,6 @@ func TestSessionController(t *testing.T) {
 		// Create a session first
 		service := services.NewSessionService(testDB.DB)
 		session := &models.Session{
-			UserID: 1,
 			Title:  "Session 1",
 			Status: models.SessionStatusActive,
 		}
@@ -80,17 +78,6 @@ func TestSessionController(t *testing.T) {
 
 		// Should return 404 as this ID doesn't exist
 		AssertStatusCode(t, rr, http.StatusNotFound)
-	})
-
-	t.Run("Get Sessions By UserID", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/api/sessions/user?user_id=1", nil)
-		rr := httptest.NewRecorder()
-
-		engine.ServeHTTP(rr, req)
-
-		AssertStatusCode(t, rr, http.StatusOK)
-		response := ParseResponse(t, rr)
-		AssertSuccess(t, response)
 	})
 
 	t.Run("Get Sessions By Status", func(t *testing.T) {

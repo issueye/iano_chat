@@ -65,8 +65,7 @@ type MessageContent struct {
 // Message 消息模型
 type Message struct {
 	BaseModel
-	SessionID       int64           `gorm:"index;not null" json:"session_id"`
-	UserID          int64           `gorm:"default:0" json:"user_id"`
+	SessionID       string          `gorm:"not null" json:"session_id"`
 	Type            MessageType     `gorm:"size:20;not null" json:"type"`
 	Content         string          `gorm:"type:text;not null" json:"content"`
 	Status          MessageStatus   `gorm:"size:20;default:'completed'" json:"status"`
@@ -226,10 +225,9 @@ func (m *Message) ToHistory() *MessageHistory {
 }
 
 // CreateUserMessage 创建用户消息
-func CreateUserMessage(sessionID, userID int64, text string) *Message {
+func CreateUserMessage(sessionID string, text string) *Message {
 	msg := &Message{
 		SessionID: sessionID,
-		UserID:    userID,
 		Type:      MessageTypeUser,
 		Status:    MessageStatusCompleted,
 	}
@@ -239,10 +237,9 @@ func CreateUserMessage(sessionID, userID int64, text string) *Message {
 }
 
 // CreateAssistantMessage 创建助手消息
-func CreateAssistantMessage(sessionID int64, status MessageStatus) *Message {
+func CreateAssistantMessage(sessionID string, status MessageStatus) *Message {
 	msg := &Message{
 		SessionID: sessionID,
-		UserID:    0,
 		Type:      MessageTypeAssistant,
 		Status:    status,
 	}
@@ -251,10 +248,9 @@ func CreateAssistantMessage(sessionID int64, status MessageStatus) *Message {
 }
 
 // CreateSystemMessage 创建系统消息
-func CreateSystemMessage(sessionID int64, text string) *Message {
+func CreateSystemMessage(sessionID string, text string) *Message {
 	msg := &Message{
 		SessionID: sessionID,
-		UserID:    0,
 		Type:      MessageTypeSystem,
 		Status:    MessageStatusCompleted,
 	}

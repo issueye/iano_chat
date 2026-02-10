@@ -48,7 +48,6 @@ func DefaultSessionConfig() *SessionConfig {
 // Session 会话模型
 type Session struct {
 	BaseModel
-	UserID       int64          `gorm:"index;not null" json:"user_id"`
 	Title        string         `gorm:"size:255;not null;default:'新会话'" json:"title"`
 	Status       SessionStatus  `gorm:"size:20;default:'active'" json:"status"`
 	ConfigJSON   string         `gorm:"type:text" json:"-"`

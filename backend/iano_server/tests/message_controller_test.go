@@ -6,7 +6,6 @@ import (
 	"iano_server/services"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -22,13 +21,13 @@ func TestMessageController(t *testing.T) {
 	// 创建路由引擎
 	engine := routes.SetupRoutes(testDB.DB)
 
-	// 使用固定的 session ID (int64) 用于消息测试
-	var testSessionID int64 = 1
+	// 使用固定的 session ID (string) 用于消息测试
+	var testSessionID string = "123456"
 
 	t.Run("Create Message", func(t *testing.T) {
 		reqBody := `{
-			"session_id": ` + strconv.FormatInt(testSessionID, 10) + `,
-			"user_id": 123,
+			"session_id": "` + testSessionID + `",
+			"key_id": "test-key-id",
 			"type": "user",
 			"content": "{\"text\": \"Hello, this is a test message\"}",
 			"status": "completed"
@@ -47,7 +46,7 @@ func TestMessageController(t *testing.T) {
 
 	t.Run("Get All Messages", func(t *testing.T) {
 		service := services.NewMessageService(testDB.DB)
-		message := models.CreateUserMessage(testSessionID, 1, "Test message 1")
+		message := models.CreateUserMessage(testSessionID, "Test message 1")
 		service.Create(message)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/messages", nil)
@@ -61,18 +60,7 @@ func TestMessageController(t *testing.T) {
 	})
 
 	t.Run("Get Messages By SessionID", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/api/messages/session?session_id="+strconv.FormatInt(testSessionID, 10), nil)
-		rr := httptest.NewRecorder()
-
-		engine.ServeHTTP(rr, req)
-
-		AssertStatusCode(t, rr, http.StatusOK)
-		response := ParseResponse(t, rr)
-		AssertSuccess(t, response)
-	})
-
-	t.Run("Get Messages By UserID", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/api/messages/user?user_id=1", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/messages/session?session_id="+testSessionID, nil)
 		rr := httptest.NewRecorder()
 
 		engine.ServeHTTP(rr, req)
@@ -100,7 +88,7 @@ func TestMessageController(t *testing.T) {
 
 	t.Run("Update Message", func(t *testing.T) {
 		service := services.NewMessageService(testDB.DB)
-		message := models.CreateUserMessage(testSessionID, 1, "Original content")
+		message := models.CreateUserMessage(testSessionID, "Original content")
 		service.Create(message)
 
 		reqBody := `{"content": "{\"text\": \"Updated content\"}"}`
@@ -118,7 +106,7 @@ func TestMessageController(t *testing.T) {
 
 	t.Run("Delete Message", func(t *testing.T) {
 		service := services.NewMessageService(testDB.DB)
-		message := models.CreateUserMessage(testSessionID, 1, "Message to delete")
+		message := models.CreateUserMessage(testSessionID, "Message to delete")
 		service.Create(message)
 
 		req := httptest.NewRequest(http.MethodDelete, "/api/messages/"+message.ID, nil)

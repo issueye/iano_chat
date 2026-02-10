@@ -153,7 +153,6 @@ func TestSequentialOperations(t *testing.T) {
 	t.Run("SequentialCreateSessions", func(t *testing.T) {
 		for i := 0; i < 5; i++ {
 			session := &models.Session{
-				UserID: 1,
 				Title:  "Sequential Session",
 				Status: models.SessionStatusActive,
 			}
