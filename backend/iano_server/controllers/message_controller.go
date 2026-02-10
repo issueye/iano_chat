@@ -17,12 +17,12 @@ func NewMessageController(messageService *services.MessageService) *MessageContr
 }
 
 type CreateMessageRequest struct {
-	SessionID int64  `json:"session_id"`
-	UserID    int64  `json:"user_id"`
-	Type      string `json:"type"`
-	Content   string `json:"content"`
-	Status    string `json:"status"`
-	ParentID  *int64 `json:"parent_id,omitempty"`
+	SessionID int64   `json:"session_id"`
+	UserID    int64   `json:"user_id"`
+	Type      string  `json:"type"`
+	Content   string  `json:"content"`
+	Status    string  `json:"status"`
+	ParentID  *string `json:"parent_id,omitempty"`
 }
 
 type UpdateMessageRequest struct {
@@ -64,10 +64,9 @@ func (c *MessageController) Create(ctx *web.Context) {
 }
 
 func (c *MessageController) GetByID(ctx *web.Context) {
-	idStr := ctx.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Fail("invalid id"))
+	id := ctx.Param("id")
+	if id == "" {
+		ctx.JSON(http.StatusBadRequest, models.Fail("id is required"))
 		return
 	}
 
@@ -146,10 +145,9 @@ func (c *MessageController) GetByType(ctx *web.Context) {
 }
 
 func (c *MessageController) Update(ctx *web.Context) {
-	idStr := ctx.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Fail("invalid id"))
+	id := ctx.Param("id")
+	if id == "" {
+		ctx.JSON(http.StatusBadRequest, models.Fail("id is required"))
 		return
 	}
 
@@ -189,10 +187,9 @@ func (c *MessageController) Update(ctx *web.Context) {
 }
 
 func (c *MessageController) Delete(ctx *web.Context) {
-	idStr := ctx.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Fail("invalid id"))
+	id := ctx.Param("id")
+	if id == "" {
+		ctx.JSON(http.StatusBadRequest, models.Fail("id is required"))
 		return
 	}
 
@@ -226,10 +223,9 @@ func (c *MessageController) DeleteBySessionID(ctx *web.Context) {
 }
 
 func (c *MessageController) AddFeedback(ctx *web.Context) {
-	idStr := ctx.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Fail("invalid id"))
+	id := ctx.Param("id")
+	if id == "" {
+		ctx.JSON(http.StatusBadRequest, models.Fail("id is required"))
 		return
 	}
 

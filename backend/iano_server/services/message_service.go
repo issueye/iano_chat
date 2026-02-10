@@ -18,7 +18,7 @@ func (s *MessageService) Create(message *models.Message) error {
 	return s.db.Create(message).Error
 }
 
-func (s *MessageService) GetByID(id int64) (*models.Message, error) {
+func (s *MessageService) GetByID(id string) (*models.Message, error) {
 	var message models.Message
 	if err := s.db.First(&message, "id = ?", id).Error; err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (s *MessageService) GetByType(messageType models.MessageType) ([]models.Mes
 	return messages, nil
 }
 
-func (s *MessageService) Update(id int64, updates map[string]interface{}) (*models.Message, error) {
+func (s *MessageService) Update(id string, updates map[string]interface{}) (*models.Message, error) {
 	var message models.Message
 	if err := s.db.First(&message, "id = ?", id).Error; err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ func (s *MessageService) Update(id int64, updates map[string]interface{}) (*mode
 	return &message, nil
 }
 
-func (s *MessageService) Delete(id int64) error {
+func (s *MessageService) Delete(id string) error {
 	result := s.db.Delete(&models.Message{}, "id = ?", id)
 	if result.Error != nil {
 		return result.Error
@@ -101,7 +101,7 @@ func (s *MessageService) CountBySessionID(sessionID int64) (int64, error) {
 	return count, nil
 }
 
-func (s *MessageService) AddFeedback(id int64, rating models.FeedbackRating, comment string) (*models.Message, error) {
+func (s *MessageService) AddFeedback(id string, rating models.FeedbackRating, comment string) (*models.Message, error) {
 	var message models.Message
 	if err := s.db.First(&message, "id = ?", id).Error; err != nil {
 		return nil, err

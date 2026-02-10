@@ -88,7 +88,7 @@ func TestMessageController(t *testing.T) {
 		message.Content = `{"text": "Test message by ID"}`
 		service.Create(message)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/messages/"+strconv.FormatInt(message.ID, 10), nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/messages/"+message.ID, nil)
 		rr := httptest.NewRecorder()
 
 		engine.ServeHTTP(rr, req)
@@ -105,7 +105,7 @@ func TestMessageController(t *testing.T) {
 
 		reqBody := `{"content": "{\"text\": \"Updated content\"}"}`
 
-		req := httptest.NewRequest(http.MethodPut, "/api/messages/"+strconv.FormatInt(message.ID, 10), strings.NewReader(reqBody))
+		req := httptest.NewRequest(http.MethodPut, "/api/messages/"+message.ID, strings.NewReader(reqBody))
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
 
@@ -121,7 +121,7 @@ func TestMessageController(t *testing.T) {
 		message := models.CreateUserMessage(testSessionID, 1, "Message to delete")
 		service.Create(message)
 
-		req := httptest.NewRequest(http.MethodDelete, "/api/messages/"+strconv.FormatInt(message.ID, 10), nil)
+		req := httptest.NewRequest(http.MethodDelete, "/api/messages/"+message.ID, nil)
 		rr := httptest.NewRecorder()
 
 		engine.ServeHTTP(rr, req)
@@ -150,7 +150,7 @@ func TestMessageController(t *testing.T) {
 
 		reqBody := `{"rating": "like", "comment": "Very helpful response"}`
 
-		req := httptest.NewRequest(http.MethodPost, "/api/messages/"+strconv.FormatInt(message.ID, 10)+"/feedback", strings.NewReader(reqBody))
+		req := httptest.NewRequest(http.MethodPost, "/api/messages/"+message.ID+"/feedback", strings.NewReader(reqBody))
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
 

@@ -64,25 +64,48 @@ type MessageContent struct {
 
 // Message 消息模型
 type Message struct {
-	ID                int64          `gorm:"primaryKey" json:"id"`
-	SessionID         int64          `gorm:"index;not null" json:"session_id"`
-	UserID            int64          `gorm:"default:0" json:"user_id"`
-	Type              MessageType    `gorm:"size:20;not null" json:"type"`
-	Content           string         `gorm:"type:text;not null" json:"content"`
-	Status            MessageStatus  `gorm:"size:20;default:'completed'" json:"status"`
-	InputTokens       int            `gorm:"default:0" json:"input_tokens"`
-	OutputTokens      int            `gorm:"default:0" json:"output_tokens"`
-	ParentID          *int64         `json:"parent_id,omitempty"`
-	FeedbackRating    *FeedbackRating `gorm:"size:10" json:"feedback_rating,omitempty"`
-	FeedbackComment   string         `gorm:"type:text" json:"feedback_comment,omitempty"`
-	FeedbackAt        *time.Time     `json:"feedback_at,omitempty"`
-	CreatedAt         time.Time      `json:"created_at"`
-	UpdatedAt         time.Time      `json:"updated_at"`
+	BaseModel
+	SessionID       int64           `gorm:"index;not null" json:"session_id"`
+	UserID          int64           `gorm:"default:0" json:"user_id"`
+	Type            MessageType     `gorm:"size:20;not null" json:"type"`
+	Content         string          `gorm:"type:text;not null" json:"content"`
+	Status          MessageStatus   `gorm:"size:20;default:'completed'" json:"status"`
+	InputTokens     int             `gorm:"default:0" json:"input_tokens"`
+	OutputTokens    int             `gorm:"default:0" json:"output_tokens"`
+	ParentID        *string         `gorm:"size:36;index" json:"parent_id,omitempty"`
+	FeedbackRating  *FeedbackRating `gorm:"size:10" json:"feedback_rating,omitempty"`
+	FeedbackComment string          `gorm:"type:text" json:"feedback_comment,omitempty"`
+	FeedbackAt      *time.Time      `json:"feedback_at,omitempty"`
 }
 
 // TableName 返回表名
 func (Message) TableName() string {
 	return "messages"
+}
+
+// BeforeCreate 创建前钩子
+func (m *Message) BeforeCreate(tx *gorm.DB) error {
+	// 调用 BaseModel 的 NewID 生成 UUID
+	if m.ID == "" {
+		m.BaseModel.NewID()
+	}
+	if m.Status == "" {
+		m.Status = MessageStatusCompleted
+	}
+	now := time.Now()
+	if m.CreatedAt.IsZero() {
+		m.CreatedAt = now
+	}
+	if m.UpdatedAt.IsZero() {
+		m.UpdatedAt = now
+	}
+	return nil
+}
+
+// BeforeUpdate 更新前钩子
+func (m *Message) BeforeUpdate(tx *gorm.DB) error {
+	m.UpdatedAt = time.Now()
+	return nil
 }
 
 // GetContent 获取消息内容对象
@@ -122,27 +145,6 @@ func (m *Message) GetTextContent() string {
 		return ""
 	}
 	return content.Text
-}
-
-// BeforeCreate 创建前钩子
-func (m *Message) BeforeCreate(tx *gorm.DB) error {
-	if m.Status == "" {
-		m.Status = MessageStatusCompleted
-	}
-	now := time.Now()
-	if m.CreatedAt.IsZero() {
-		m.CreatedAt = now
-	}
-	if m.UpdatedAt.IsZero() {
-		m.UpdatedAt = now
-	}
-	return nil
-}
-
-// BeforeUpdate 更新前钩子
-func (m *Message) BeforeUpdate(tx *gorm.DB) error {
-	m.UpdatedAt = time.Now()
-	return nil
 }
 
 // IsUserMessage 是否为用户消息
@@ -231,18 +233,21 @@ func CreateUserMessage(sessionID, userID int64, text string) *Message {
 		Type:      MessageTypeUser,
 		Status:    MessageStatusCompleted,
 	}
+	msg.NewID()
 	msg.SetTextContent(text)
 	return msg
 }
 
 // CreateAssistantMessage 创建助手消息
 func CreateAssistantMessage(sessionID int64, status MessageStatus) *Message {
-	return &Message{
+	msg := &Message{
 		SessionID: sessionID,
 		UserID:    0,
 		Type:      MessageTypeAssistant,
 		Status:    status,
 	}
+	msg.NewID()
+	return msg
 }
 
 // CreateSystemMessage 创建系统消息
@@ -253,6 +258,7 @@ func CreateSystemMessage(sessionID int64, text string) *Message {
 		Type:      MessageTypeSystem,
 		Status:    MessageStatusCompleted,
 	}
+	msg.NewID()
 	msg.SetTextContent(text)
 	return msg
 }
