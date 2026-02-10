@@ -1,11 +1,11 @@
 <template>
-    <div class="flex justify-between items-center border-b border-border p-6">
+    <div class="flex justify-between items-center p-4 border-b border-border">
         <h2 :class="['text-lg font-semibold leading-none tracking-tight', customClass]">
             <slot />
         </h2>
         <button
             type="button"
-            class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+            class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
             @click="handleClose"
         >
             <X class="h-4 w-4" />
@@ -25,10 +25,15 @@ const props = defineProps({
     },
 });
 
-const dialog = inject('dialog');
+const dialog = inject('dialog', null);
 const customClass = computed(() => props.class);
 
 function handleClose() {
-    dialog?.closeModal?.();
+    console.log('DialogTitle handleClose called');
+    if (dialog && dialog.closeModal) {
+        dialog.closeModal();
+    } else {
+        console.warn('dialog or closeModal not available');
+    }
 }
 </script>

@@ -1,6 +1,7 @@
 <script setup>
 import { useVModel } from "@vueuse/core"
 import { cn } from "@/lib/utils"
+import { Check } from "lucide-vue-next"
 
 const props = defineProps({
   modelValue: { type: [Boolean, String, Number], default: false },

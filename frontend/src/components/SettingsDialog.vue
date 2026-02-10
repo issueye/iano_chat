@@ -1,5 +1,5 @@
 <template>
-    <Dialog :open="open" @update:open="handleOpenChange">
+    <Dialog :open="open" @update:open="handleOpenChange" @open="handleOpen">
         <DialogContent
             class="sm:max-w-[1200px] overflow-hidden flex bg-card"
         >
@@ -61,6 +61,12 @@
             </div>
         </DialogContent>
     </Dialog>
+
+    <ProviderFormDialog
+        v-model:open="providerFormOpen"
+        :provider="editingProvider"
+        @success="fetchData"
+    />
 </template>
 
 <script setup>
@@ -69,6 +75,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import ProvidersPanel from "./settings/ProvidersPanel.vue";
 import AgentsPanel from "./settings/AgentsPanel.vue";
 import ToolsPanel from "./settings/ToolsPanel.vue";
+import ProviderFormDialog from "./settings/ProviderFormDialog.vue";
 import { Building2, Bot, Wrench } from "lucide-vue-next";
 
 const props = defineProps({
@@ -83,6 +90,9 @@ const providers = ref([]);
 const agents = ref([]);
 const tools = ref([]);
 
+const providerFormOpen = ref(false);
+const editingProvider = ref(null);
+
 const tabs = [
     { value: "providers", label: "供应商", icon: Building2 },
     { value: "agents", label: "Agents", icon: Bot },
@@ -91,9 +101,11 @@ const tabs = [
 
 function handleOpenChange(value) {
     emit("update:open", value);
-    if (value) {
-        fetchData();
-    }
+}
+
+function handleOpen() {
+    activeTab.value = "providers";
+    fetchData();
 }
 
 async function fetchData() {
@@ -105,6 +117,7 @@ async function fetchData() {
             tools: "/api/tools",
         };
         const response = await fetch(endpoints[activeTab.value]);
+        console.log('response', response);
         if (response.ok) {
             const result = await response.json();
             if (result.data) {
@@ -125,7 +138,12 @@ async function fetchData() {
 }
 
 function handleAdd() {
-    emit("add", activeTab.value);
+    if (activeTab.value === 'providers') {
+        editingProvider.value = null;
+        providerFormOpen.value = true;
+    } else {
+        emit("add", activeTab.value);
+    }
 }
 
 function handleConfigure(item) {
@@ -133,7 +151,12 @@ function handleConfigure(item) {
 }
 
 function handleEdit(item) {
-    emit("edit", { type: activeTab.value, item });
+    if (activeTab.value === 'providers') {
+        editingProvider.value = item;
+        providerFormOpen.value = true;
+    } else {
+        emit("edit", { type: activeTab.value, item });
+    }
 }
 
 function handleDelete(item) {

@@ -61,16 +61,6 @@
                     >
                         <Trash2 class="h-4 w-4 text-muted-foreground" />
                     </Button>
-
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        class="hover:bg-muted"
-                        title="设置"
-                        @click="isSettingsOpen = true"
-                    >
-                        <Settings class="h-4 w-4 text-muted-foreground" />
-                    </Button>
                 </div>
             </header>
 
@@ -193,7 +183,7 @@
         <!-- Settings Dialog -->
         <SettingsDialog
             :open="isSettingsOpen"
-            @update:open="isSettingsOpen = $event"
+            @update:open="(val) => { console.log('ChatContainer update:open', val); isSettingsOpen = val; }"
         />
     </div>
 </template>

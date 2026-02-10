@@ -5,7 +5,7 @@
 </template>
 
 <script setup>
-import { provide, computed } from 'vue';
+import { provide, ref, watch } from 'vue';
 
 const props = defineProps({
     open: {
@@ -14,19 +14,24 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(['update:open']);
+const emit = defineEmits(['update:open', 'open']);
 
-const isOpen = computed({
-    get: () => props.open,
-    set: (value) => emit('update:open', value),
+const isOpen = ref(props.open);
+
+watch(() => props.open, (newVal) => {
+    isOpen.value = newVal;
+    if (newVal) {
+        emit('open');
+    }
 });
 
 function closeModal() {
     isOpen.value = false;
+    emit('update:open', false);
 }
 
 provide('dialog', {
-    isOpen,
+    isOpen: isOpen,
     closeModal,
 });
 </script>
