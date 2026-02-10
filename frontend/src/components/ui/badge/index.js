@@ -1,4 +1,3 @@
-import type { VariantProps } from "class-variance-authority"
 import { cva } from "class-variance-authority"
 
 export { default as Badge } from "./Badge.vue"
@@ -22,5 +21,3 @@ export const badgeVariants = cva(
     },
   },
 )
-
-export type BadgeVariants = VariantProps<typeof badgeVariants>

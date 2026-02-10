@@ -36,7 +36,7 @@
           >
             <Menu class="h-5 w-5 text-muted-foreground" />
           </Button>
-          <div>
+          <div class="flex items-center gap-1">
             <h1 class="font-semibold text-base text-foreground">
               {{ currentSession?.title || '新会话' }}
             </h1>
@@ -141,7 +141,7 @@
 
       <!-- Input Area -->
       <div class="border-t border-border bg-card p-4 sm:p-6">
-        <div class="max-w-2xl mx-auto px-2 sm:px-0">
+        <div class="w-full mx-auto p-2 sm:px-0">
           <ChatInput
             :is-loading="chatStore.isLoading"
             @send="handleSendMessage"

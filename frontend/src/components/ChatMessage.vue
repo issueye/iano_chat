@@ -81,11 +81,6 @@
               </div>
             </div>
           </div>
-              <div class="mt-2 opacity-70 font-mono text-[10px] bg-black/5 rounded p-2 truncate">
-                {{ tool.function.arguments }}
-              </div>
-            </div>
-          </div>
 
           <!-- Reasoning -->
           <div v-if="messageContent.reasoning_content" class="mt-3">

@@ -25,7 +25,7 @@
         <Input
           type="text"
           placeholder="搜索会话..."
-          class="pl-9 pr-4 py-2 bg-muted/50 border-0 focus:bg-muted focus:ring-1 focus:ring-ring/30"
+          class="pl-9 pr-4 !py-2 bg-muted/50 border-0 focus:bg-muted focus:ring-1 focus:ring-ring/30"
         />
       </div>
     </div>
