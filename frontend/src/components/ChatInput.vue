@@ -67,6 +67,33 @@
               </SelectItem>
             </SelectContent>
           </Select>
+
+          <div class="h-4 w-px bg-border"></div>
+
+          <div>
+            <input
+              ref="directoryInput"
+              type="file"
+              webkitdirectory
+              directory
+              class="hidden"
+              @change="handleDirectorySelect"
+            />
+            <div
+              class="flex items-center min-w-[140px] h-[34px] gap-1.5 px-2 py-1.5 rounded-lg bg-muted/50 border border-border/50 cursor-pointer hover:bg-muted transition-colors"
+              @click="selectDirectory"
+            >
+              <FolderOpen class="h-4 w-4 text-muted-foreground shrink-0" />
+              <span class="text-xs text-muted-foreground whitespace-nowrap">
+                {{ selectedDirectory || '选择目录' }}
+              </span>
+              <X
+                v-if="selectedDirectory"
+                class="h-3 w-3 text-muted-foreground hover:text-foreground shrink-0"
+                @click.stop="clearDirectory"
+              />
+            </div>
+          </div>
         </div>
 
         <Button
@@ -93,7 +120,7 @@ import { ref, computed } from "vue"
 import { Button } from "@/components/ui/button"
 import { Tooltip } from "@/components/ui/tooltip"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
-import { Paperclip, Send, Loader2 } from "lucide-vue-next"
+import { Paperclip, Send, Loader2, FolderOpen, X } from "lucide-vue-next"
 
 const props = defineProps({
   isLoading: {
@@ -110,10 +137,12 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(["send", "update:modelValue"])
+const emit = defineEmits(["send", "update:modelValue", "select-directory"])
 
 const inputText = ref("")
 const textareaRef = ref(null)
+const directoryInput = ref(null)
+const selectedDirectory = ref("")
 
 const currentAgent = computed(() => {
   return props.agents.find(a => a.id === props.modelValue)
@@ -142,12 +171,37 @@ function sendMessage() {
   const text = inputText.value.trim()
   if (!text || props.isLoading) return
 
-  emit("send", text)
+  emit("send", text, selectedDirectory.value)
   inputText.value = ""
 
   const textarea = textareaRef.value
   if (textarea) {
     textarea.style.height = "auto"
+  }
+}
+
+function selectDirectory() {
+  if (directoryInput.value) {
+    directoryInput.value.click()
+  }
+}
+
+function handleDirectorySelect(event) {
+  const files = event.target.files
+  if (files && files.length > 0) {
+    const file = files[0]
+    // 获取目录完整绝对路径
+    const fullPath = file.path ? file.path.substring(0, file.path.lastIndexOf(file.name) - 1) : file.webkitRelativePath
+    selectedDirectory.value = fullPath
+    // 立即将绝对路径传给后端
+    emit("select-directory", fullPath)
+  }
+}
+
+function clearDirectory() {
+  selectedDirectory.value = ""
+  if (directoryInput.value) {
+    directoryInput.value.value = ""
   }
 }
 </script>
