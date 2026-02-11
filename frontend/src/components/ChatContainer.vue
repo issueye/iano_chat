@@ -44,8 +44,8 @@
                         <h1 class="font-semibold text-base text-foreground">
                             {{ currentSession?.title || "新会话" }}
                         </h1>
-                        <p class="text-xs text-muted-foreground">
-                            {{ chatStore.messages.length }} 条消息
+                    <p class="text-xs text-muted-foreground">
+                            {{ chatStore.currentMessages.length }} 条消息
                         </p>
                     </div>
                 </div>
@@ -68,7 +68,7 @@
                 <div class="mx-auto space-y-6 pb-20">
                     <!-- Welcome Screen -->
                     <div
-                        v-if="!chatStore.messages.length"
+                        v-if="!chatStore.currentMessages.length"
                         class="text-center py-12 sm:py-16 px-4"
                     >
                         <!-- Simple Icon -->
@@ -135,10 +135,10 @@
                     <!-- Messages -->
                     <template v-else>
                         <ChatMessage
-                            v-for="(message, index) in chatStore.messages"
+                            v-for="(message, index) in chatStore.currentMessages"
                             :key="message.id"
                             :message="message"
-                            :is-last="index === chatStore.messages.length - 1"
+                            :is-last="index === chatStore.currentMessages.length - 1"
                         />
                     </template>
 

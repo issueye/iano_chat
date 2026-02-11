@@ -10,19 +10,6 @@ import (
 	"github.com/cloudwego/eino/schema"
 )
 
-// SummaryConfig 摘要配置
-type SummaryConfig struct {
-	// 保留的最近对话轮数（一轮 = 用户 + 助手）
-	KeepRecentRounds int
-	// 触发摘要的对话轮数阈值
-	TriggerThreshold int
-	// 摘要的最大token数
-	MaxSummaryTokens int
-	// 是否启用摘要
-	Enabled bool
-}
-
-// ForceSummarize 强制触发摘要
 func (a *Agent) ForceSummarize(ctx context.Context) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()

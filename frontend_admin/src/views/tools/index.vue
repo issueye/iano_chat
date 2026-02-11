@@ -1,6 +1,5 @@
 <template>
   <div class="space-y-6">
-    <!-- 页面标题 -->
     <div class="flex items-center justify-between">
       <div>
         <h2 class="text-2xl font-bold tracking-tight">Tools 管理</h2>
@@ -14,7 +13,6 @@
       </Button>
     </div>
 
-    <!-- 统计卡片 -->
     <div class="grid gap-4 md:grid-cols-4">
       <Card>
         <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -22,7 +20,7 @@
           <Wrench class="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div class="text-2xl font-bold">{{ stats.total }}</div>
+          <div class="text-2xl font-bold">{{ toolStore.totalCount }}</div>
         </CardContent>
       </Card>
       <Card>
@@ -31,7 +29,7 @@
           <CheckCircle2 class="h-4 w-4 text-green-500" />
         </CardHeader>
         <CardContent>
-          <div class="text-2xl font-bold text-green-600">{{ stats.active }}</div>
+          <div class="text-2xl font-bold text-green-600">{{ toolStore.enabledCount }}</div>
         </CardContent>
       </Card>
       <Card>
@@ -40,21 +38,20 @@
           <XCircle class="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div class="text-2xl font-bold text-muted-foreground">{{ stats.inactive }}</div>
+          <div class="text-2xl font-bold text-muted-foreground">{{ toolStore.disabledCount }}</div>
         </CardContent>
       </Card>
       <Card>
         <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle class="text-sm font-medium">分类数</CardTitle>
+          <CardTitle class="text-sm font-medium">类型数</CardTitle>
           <Tag class="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div class="text-2xl font-bold">{{ stats.categories }}</div>
+          <div class="text-2xl font-bold">{{ typeCount }}</div>
         </CardContent>
       </Card>
     </div>
 
-    <!-- 数据表格 -->
     <Card>
       <CardHeader>
         <CardTitle>Tool 列表</CardTitle>
@@ -62,11 +59,10 @@
       </CardHeader>
       <CardContent>
         <DataTable
-          :data="items"
+          :data="toolStore.tools"
           :columns="columns"
-          :loading="loading"
+          :loading="toolStore.loading"
         >
-          <!-- 名称列 -->
           <template #name="{ row }">
             <div class="flex items-center gap-3">
               <div class="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
@@ -81,39 +77,38 @@
             </div>
           </template>
           
-          <!-- 类型列 -->
           <template #type="{ value }">
-            <Badge :variant="getTypeVariant(value)">{{ value }}</Badge>
+            <Badge :variant="getTypeVariant(value)">{{ getTypeLabel(value) }}</Badge>
           </template>
           
-          <!-- 分类列 -->
-          <template #category="{ value }">
+          <template #status="{ value }">
+            <Badge :variant="value === 'enabled' ? 'default' : 'outline'">
+              {{ value === "enabled" ? "启用" : "禁用" }}
+            </Badge>
+          </template>
+          
+          <template #version="{ value }">
             <span class="text-sm text-muted-foreground">{{ value || "-" }}</span>
           </template>
           
-          <!-- 版本列 -->
-          <template #version="{ value }">
-            <span class="text-sm text-muted-foreground">{{ value || "v1.0" }}</span>
-          </template>
-          
-          <!-- 作者列 -->
           <template #author="{ value }">
             <span class="text-sm text-muted-foreground">{{ value || "-" }}</span>
           </template>
           
-          <!-- 状态列 -->
-          <template #status="{ value }">
-            <Badge :variant="value === 'active' ? 'default' : 'outline'">
-              {{ value === "active" ? "启用" : "禁用" }}
-            </Badge>
+          <template #created_at="{ value }">
+            <span class="text-muted-foreground text-sm">{{ formatDatetime(value) }}</span>
           </template>
           
-          <!-- 操作列 -->
           <template #actions="{ row }">
             <div class="flex items-center justify-center gap-1">
               <Tooltip content="编辑">
                 <Button variant="ghost" size="icon-sm" @click="handleEdit(row)">
                   <Pencil class="h-4 w-4" />
+                </Button>
+              </Tooltip>
+              <Tooltip content="测试">
+                <Button variant="ghost" size="icon-sm" @click="handleTest(row)">
+                  <Play class="h-4 w-4" />
                 </Button>
               </Tooltip>
               <Tooltip content="删除">
@@ -127,14 +122,12 @@
       </CardContent>
     </Card>
 
-    <!-- 添加/编辑弹窗 -->
     <ToolFormDialog
       v-model:open="formDialogOpen"
       :tool="editingItem"
-      @success="fetchData"
+      @success="toolStore.fetchAll()"
     />
 
-    <!-- 删除确认弹窗 -->
     <AlertDialog
       v-model:open="deleteDialogOpen"
       :title="`删除 ${deletingItem?.name || ''}`"
@@ -148,141 +141,103 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { ref, computed, onMounted } from "vue"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { DataTable } from "@/components/ui/data-table";
-import { Tooltip } from "@/components/ui/tooltip";
-import { AlertDialog } from "@/components/ui/alert-dialog";
-import ToolFormDialog from "./components/ToolFormDialog.vue";
-import { Plus, Pencil, Trash2, Wrench, CheckCircle2, XCircle, Tag } from "lucide-vue-next";
+} from "@/components/ui/card"
+import { DataTable } from "@/components/ui/data-table"
+import { Tooltip } from "@/components/ui/tooltip"
+import { AlertDialog } from "@/components/ui/alert-dialog"
+import ToolFormDialog from "./components/ToolFormDialog.vue"
+import { Plus, Pencil, Trash2, Wrench, CheckCircle2, XCircle, Tag, Play } from "lucide-vue-next"
+import { formatDatetime } from "@/lib/utils"
+import { useToolStore } from "@/stores"
 
-// 表格列配置
+const toolStore = useToolStore()
+
 const columns = [
   { key: "name", title: "名称" },
   { key: "type", title: "类型", width: "100px", align: "center" },
-  { key: "category", title: "分类" },
-  { key: "version", title: "版本", width: "160px", align: "center" },
-  { key: "author", title: "作者", width: "160px" },
-  { key: "status", title: "状态", width: "100px", align: "center" },
-  { title: "操作", slot: "actions", width: "100px", align: "center" },
-];
+  { key: "status", title: "状态", width: "80px", align: "center" },
+  { key: "version", title: "版本", width: "100px", align: "center" },
+  { key: "author", title: "作者", width: "120px" },
+  { key: "created_at", title: "创建时间", width: "160px" },
+  { title: "操作", slot: "actions", width: "120px", align: "center" },
+]
 
-// 数据状态
-const items = ref([]);
-const loading = ref(false);
-const formDialogOpen = ref(false);
-const editingItem = ref(null);
-const deleteDialogOpen = ref(false);
-const deletingItem = ref(null);
+const formDialogOpen = ref(false)
+const editingItem = ref(null)
+const deleteDialogOpen = ref(false)
+const deletingItem = ref(null)
 
-// 统计数据
-const stats = computed(() => {
-  const total = items.value.length;
-  const active = items.value.filter(item => item.status === 'active').length;
-  const categories = new Set(items.value.map(item => item.category).filter(Boolean)).size;
-  return {
-    total,
-    active,
-    inactive: total - active,
-    categories
-  };
-});
+const typeCount = computed(() => {
+  const types = new Set(toolStore.tools.map(t => t.type).filter(Boolean))
+  return types.size
+})
 
-/**
- * 获取类型对应的 Badge 变体
- * @param {string} type - 工具类型
- * @returns {string} Badge 变体名称
- */
 function getTypeVariant(type) {
   const variants = {
-    function: "default",
-    search: "secondary",
-    file: "outline",
-    api: "secondary",
-  };
-  return variants[type] || "outline";
+    builtin: "default",
+    custom: "secondary",
+    external: "outline",
+    plugin: "secondary",
+  }
+  return variants[type] || "outline"
 }
 
-/**
- * 获取 Tool 列表数据
- */
-async function fetchData() {
-  loading.value = true;
+function getTypeLabel(type) {
+  const labels = {
+    builtin: "内置",
+    custom: "自定义",
+    external: "外部",
+    plugin: "插件",
+  }
+  return labels[type] || type
+}
+
+function handleAdd() {
+  editingItem.value = null
+  formDialogOpen.value = true
+}
+
+function handleEdit(item) {
+  editingItem.value = item
+  formDialogOpen.value = true
+}
+
+async function handleTest(item) {
   try {
-    const response = await fetch("/api/tools");
-    if (response.ok) {
-      const result = await response.json();
-      if (result.data) {
-        items.value = result.data;
-      }
-    }
+    const result = await toolStore.test(item.id)
+    alert(`测试成功: ${result.message || "工具定义加载成功"}`)
   } catch (error) {
-    console.warn("Failed to fetch tools:", error);
-  } finally {
-    loading.value = false;
+    alert(error.message || "测试失败")
   }
 }
 
-/**
- * 打开添加 Tool 弹窗
- */
-function handleAdd() {
-  editingItem.value = null;
-  formDialogOpen.value = true;
-}
-
-/**
- * 打开编辑 Tool 弹窗
- * @param {Object} item - Tool 数据
- */
-function handleEdit(item) {
-  editingItem.value = item;
-  formDialogOpen.value = true;
-}
-
-/**
- * 打开删除确认弹窗
- * @param {Object} item - Tool 数据
- */
 function handleDelete(item) {
-  deletingItem.value = item;
-  deleteDialogOpen.value = true;
+  deletingItem.value = item
+  deleteDialogOpen.value = true
 }
 
-/**
- * 执行删除操作
- */
 async function executeDelete() {
-  if (!deletingItem.value?.id) return;
+  if (!deletingItem.value?.id) return
 
   try {
-    const response = await fetch(`/api/tools/${deletingItem.value.id}`, {
-      method: "DELETE",
-    });
-
-    if (response.ok) {
-      fetchData();
-    } else {
-      const error = await response.json();
-      alert(error.message || "删除失败");
-    }
+    await toolStore.remove(deletingItem.value.id)
   } catch (error) {
-    console.error("Failed to delete tool:", error);
-    alert("删除失败，请检查网络连接");
+    alert(error.message || "删除失败")
   } finally {
-    deletingItem.value = null;
+    deletingItem.value = null
   }
 }
 
 onMounted(() => {
-  fetchData();
-});
+  toolStore.fetchAll()
+})
 </script>

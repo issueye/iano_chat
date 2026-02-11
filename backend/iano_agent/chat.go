@@ -15,23 +15,6 @@ import (
 	"github.com/cloudwego/eino/schema"
 )
 
-type MessageCallback func(content string, isToolCall bool)
-
-type Tool struct {
-	Name        string
-	Description string
-	Handler     func(ctx context.Context, params map[string]interface{}) (string, error)
-}
-
-type TokenUsage struct {
-	TotalTokens      int64
-	PromptTokens     int64
-	CompletionTokens int64
-	SummaryTokens    int64
-	SavedTokens      int64
-	LastUpdated      time.Time
-}
-
 type ConversationRound struct {
 	UserMessage      *schema.Message
 	AssistantMessage *schema.Message

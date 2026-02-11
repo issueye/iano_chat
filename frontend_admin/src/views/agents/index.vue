@@ -1,6 +1,5 @@
 <template>
   <div class="space-y-6">
-    <!-- 页面标题 -->
     <div class="flex items-center justify-between">
       <div>
         <h2 class="text-2xl font-bold tracking-tight">Agents 管理</h2>
@@ -14,38 +13,45 @@
       </Button>
     </div>
 
-    <!-- 统计卡片 -->
-    <div class="grid gap-4 md:grid-cols-3">
+    <div class="grid gap-4 md:grid-cols-4">
       <Card>
         <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle class="text-sm font-medium">Agent 总数</CardTitle>
           <Bot class="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div class="text-2xl font-bold">{{ stats.total }}</div>
+          <div class="text-2xl font-bold">{{ agentStore.totalCount }}</div>
         </CardContent>
       </Card>
       <Card>
         <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle class="text-sm font-medium">已启用</CardTitle>
+          <CardTitle class="text-sm font-medium">主 Agent</CardTitle>
           <CheckCircle2 class="h-4 w-4 text-green-500" />
         </CardHeader>
         <CardContent>
-          <div class="text-2xl font-bold text-green-600">{{ stats.active }}</div>
+          <div class="text-2xl font-bold text-green-600">{{ mainAgentCount }}</div>
         </CardContent>
       </Card>
       <Card>
         <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle class="text-sm font-medium">已禁用</CardTitle>
-          <XCircle class="h-4 w-4 text-muted-foreground" />
+          <CardTitle class="text-sm font-medium">子 Agent</CardTitle>
+          <Layers class="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div class="text-2xl font-bold text-muted-foreground">{{ stats.inactive }}</div>
+          <div class="text-2xl font-bold">{{ subAgentCount }}</div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle class="text-sm font-medium">自定义</CardTitle>
+          <Settings class="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div class="text-2xl font-bold">{{ customAgentCount }}</div>
         </CardContent>
       </Card>
     </div>
 
-    <!-- 数据表格 -->
     <Card>
       <CardHeader>
         <CardTitle>Agent 列表</CardTitle>
@@ -53,11 +59,10 @@
       </CardHeader>
       <CardContent>
         <DataTable
-          :data="items"
+          :data="agentStore.agents"
           :columns="columns"
-          :loading="loading"
+          :loading="agentStore.loading"
         >
-          <!-- 名称列 -->
           <template #name="{ row }">
             <div class="flex items-center gap-3">
               <div class="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
@@ -72,38 +77,34 @@
             </div>
           </template>
           
-          <!-- 类型列 -->
           <template #type="{ value }">
-            <Badge variant="outline">{{ value }}</Badge>
+            <Badge :variant="getTypeVariant(value)">{{ getTypeLabel(value) }}</Badge>
           </template>
           
-          <!-- 模型列 -->
           <template #model="{ value }">
             <span class="text-sm text-muted-foreground">{{ value || "-" }}</span>
           </template>
           
-          <!-- Tools 列 -->
-          <template #tools="{ row }">
-            <Tooltip :content="row.tools || '无'">
-              <Badge variant="secondary">
-                {{ row.tools_count || 0 }} 个
-              </Badge>
-            </Tooltip>
-          </template>
-          
-          <!-- 状态列 -->
-          <template #status="{ value }">
-            <Badge :variant="value === 'active' ? 'default' : 'outline'">
-              {{ value === "active" ? "启用" : "禁用" }}
+          <template #is_sub_agent="{ value }">
+            <Badge :variant="value ? 'secondary' : 'outline'">
+              {{ value ? "是" : "否" }}
             </Badge>
           </template>
           
-          <!-- 操作列 -->
+          <template #created_at="{ value }">
+            <span class="text-muted-foreground text-sm">{{ formatDatetime(value) }}</span>
+          </template>
+          
           <template #actions="{ row }">
             <div class="flex items-center justify-center gap-1">
               <Tooltip content="编辑">
                 <Button variant="ghost" size="icon-sm" @click="handleEdit(row)">
                   <Pencil class="h-4 w-4" />
+                </Button>
+              </Tooltip>
+              <Tooltip content="重载">
+                <Button variant="ghost" size="icon-sm" @click="handleReload(row)">
+                  <RefreshCw class="h-4 w-4" />
                 </Button>
               </Tooltip>
               <Tooltip content="删除">
@@ -117,14 +118,12 @@
       </CardContent>
     </Card>
 
-    <!-- 添加/编辑弹窗 -->
     <AgentFormDialog
       v-model:open="formDialogOpen"
       :agent="editingItem"
-      @success="fetchData"
+      @success="agentStore.fetchAll()"
     />
 
-    <!-- 删除确认弹窗 -->
     <AlertDialog
       v-model:open="deleteDialogOpen"
       :title="`删除 ${deletingItem?.name || ''}`"
@@ -138,123 +137,107 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { ref, computed, onMounted } from "vue"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { DataTable } from "@/components/ui/data-table";
-import { Tooltip } from "@/components/ui/tooltip";
-import { AlertDialog } from "@/components/ui/alert-dialog";
-import AgentFormDialog from "./components/AgentFormDialog.vue";
-import { Plus, Pencil, Trash2, Bot, CheckCircle2, XCircle } from "lucide-vue-next";
+} from "@/components/ui/card"
+import { DataTable } from "@/components/ui/data-table"
+import { Tooltip } from "@/components/ui/tooltip"
+import { AlertDialog } from "@/components/ui/alert-dialog"
+import AgentFormDialog from "./components/AgentFormDialog.vue"
+import { Plus, Pencil, Trash2, Bot, CheckCircle2, RefreshCw, Layers, Settings } from "lucide-vue-next"
+import { formatDatetime } from "@/lib/utils"
+import { useAgentStore } from "@/stores"
 
-// 表格列配置
+const agentStore = useAgentStore()
+
 const columns = [
   { key: "name", title: "名称" },
   { key: "type", title: "类型", width: "100px", align: "center" },
   { key: "model", title: "模型", width: "150px" },
-  { key: "tools", title: "Tools", align: "center" },
-  { key: "status", title: "状态", width: "100px", align: "center" },
-  { title: "操作", slot: "actions", width: "100px", fixed: "right", align: "center" },
-];
+  { key: "is_sub_agent", title: "子Agent", width: "80px", align: "center" },
+  { key: "created_at", title: "创建时间", width: "180px" },
+  { title: "操作", slot: "actions", width: "120px", fixed: "right", align: "center" },
+]
 
-// 数据状态
-const items = ref([]);
-const loading = ref(false);
-const formDialogOpen = ref(false);
-const editingItem = ref(null);
-const deleteDialogOpen = ref(false);
-const deletingItem = ref(null);
+const formDialogOpen = ref(false)
+const editingItem = ref(null)
+const deleteDialogOpen = ref(false)
+const deletingItem = ref(null)
 
-// 统计数据
-const stats = computed(() => {
-  const total = items.value.length;
-  const active = items.value.filter(item => item.status === 'active').length;
-  return {
-    total,
-    active,
-    inactive: total - active
-  };
-});
+const mainAgentCount = computed(() => 
+  agentStore.agents.filter(a => a.type === 'main').length
+)
 
-/**
- * 获取 Agent 列表数据
- */
-async function fetchData() {
-  loading.value = true;
+const subAgentCount = computed(() => 
+  agentStore.agents.filter(a => a.type === 'sub').length
+)
+
+const customAgentCount = computed(() => 
+  agentStore.agents.filter(a => a.type === 'custom').length
+)
+
+function getTypeVariant(type) {
+  const variants = {
+    main: "default",
+    sub: "secondary",
+    custom: "outline",
+  }
+  return variants[type] || "outline"
+}
+
+function getTypeLabel(type) {
+  const labels = {
+    main: "主 Agent",
+    sub: "子 Agent",
+    custom: "自定义",
+  }
+  return labels[type] || type
+}
+
+function handleAdd() {
+  editingItem.value = null
+  formDialogOpen.value = true
+}
+
+function handleEdit(item) {
+  editingItem.value = item
+  formDialogOpen.value = true
+}
+
+async function handleReload(item) {
   try {
-    const response = await fetch("/api/agents");
-    if (response.ok) {
-      const result = await response.json();
-      if (result.data) {
-        items.value = result.data;
-      }
-    }
+    await agentStore.reload(item.id)
+    alert("Agent 重载成功")
   } catch (error) {
-    console.warn("Failed to fetch agents:", error);
-  } finally {
-    loading.value = false;
+    alert(error.message || "重载失败")
   }
 }
 
-/**
- * 打开添加 Agent 弹窗
- */
-function handleAdd() {
-  editingItem.value = null;
-  formDialogOpen.value = true;
-}
-
-/**
- * 打开编辑 Agent 弹窗
- * @param {Object} item - Agent 数据
- */
-function handleEdit(item) {
-  editingItem.value = item;
-  formDialogOpen.value = true;
-}
-
-/**
- * 打开删除确认弹窗
- * @param {Object} item - Agent 数据
- */
 function handleDelete(item) {
-  deletingItem.value = item;
-  deleteDialogOpen.value = true;
+  deletingItem.value = item
+  deleteDialogOpen.value = true
 }
 
-/**
- * 执行删除操作
- */
 async function executeDelete() {
-  if (!deletingItem.value?.id) return;
+  if (!deletingItem.value?.id) return
 
   try {
-    const response = await fetch(`/api/agents/${deletingItem.value.id}`, {
-      method: "DELETE",
-    });
-
-    if (response.ok) {
-      fetchData();
-    } else {
-      const error = await response.json();
-      alert(error.message || "删除失败");
-    }
+    await agentStore.remove(deletingItem.value.id)
   } catch (error) {
-    console.error("Failed to delete agent:", error);
-    alert("删除失败，请检查网络连接");
+    alert(error.message || "删除失败")
   } finally {
-    deletingItem.value = null;
+    deletingItem.value = null
   }
 }
 
 onMounted(() => {
-  fetchData();
-});
+  agentStore.fetchAll()
+})
 </script>

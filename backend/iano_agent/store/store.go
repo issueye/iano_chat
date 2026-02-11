@@ -1,8 +1,9 @@
-package agent
+package store
 
 import (
 	"context"
 	"encoding/json"
+	"sync"
 	"time"
 
 	"github.com/cloudwego/eino/schema"
@@ -13,6 +14,19 @@ type ConversationStore interface {
 	Load(ctx context.Context, sessionID string) (*ConversationLayer, error)
 	Delete(ctx context.Context, sessionID string) error
 	Exists(ctx context.Context, sessionID string) (bool, error)
+}
+
+type ConversationLayer struct {
+	RecentRounds     []*ConversationRound
+	SummaryContent   string
+	SummarizedRounds int
+}
+
+type ConversationRound struct {
+	UserMessage      *schema.Message
+	AssistantMessage *schema.Message
+	Timestamp        time.Time
+	TokenCount       int
 }
 
 type ConversationData struct {
@@ -88,11 +102,6 @@ func newAssistantMessage(content string) *schema.Message {
 	return schema.AssistantMessage(content, nil)
 }
 
-type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
 func (cd *ConversationData) ToJSON() ([]byte, error) {
 	return json.Marshal(cd)
 }
@@ -107,6 +116,7 @@ func ConversationDataFromJSON(data []byte) (*ConversationData, error) {
 
 type MemoryStore struct {
 	data map[string]*ConversationLayer
+	mu   sync.RWMutex
 }
 
 func NewMemoryStore() *MemoryStore {
@@ -116,11 +126,15 @@ func NewMemoryStore() *MemoryStore {
 }
 
 func (s *MemoryStore) Save(ctx context.Context, sessionID string, layer *ConversationLayer) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.data[sessionID] = layer
 	return nil
 }
 
 func (s *MemoryStore) Load(ctx context.Context, sessionID string) (*ConversationLayer, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	layer, ok := s.data[sessionID]
 	if !ok {
 		return nil, nil
@@ -129,11 +143,15 @@ func (s *MemoryStore) Load(ctx context.Context, sessionID string) (*Conversation
 }
 
 func (s *MemoryStore) Delete(ctx context.Context, sessionID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	delete(s.data, sessionID)
 	return nil
 }
 
 func (s *MemoryStore) Exists(ctx context.Context, sessionID string) (bool, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	_, ok := s.data[sessionID]
 	return ok, nil
 }

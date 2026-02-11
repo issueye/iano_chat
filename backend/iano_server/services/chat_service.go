@@ -7,6 +7,7 @@ import (
 	"time"
 
 	iano "iano_agent"
+	"iano_agent/store"
 	"iano_server/models"
 
 	"github.com/cloudwego/eino/components/model"
@@ -40,11 +41,11 @@ func NewChatService(db *gorm.DB, chatModel model.ToolCallingChatModel, redisClie
 		cfg = DefaultChatServiceConfig()
 	}
 
-	var store iano.ConversationStore
+	var st store.ConversationStore
 	if redisClient != nil && cfg.RedisEnabled {
-		store = iano.NewRedisStore(redisClient, nil)
+		st = store.NewRedisStore(redisClient, nil)
 	} else {
-		store = iano.NewMemoryStore()
+		st = store.NewMemoryStore()
 	}
 
 	poolConfig := &iano.AgentPoolConfig{
@@ -52,7 +53,7 @@ func NewChatService(db *gorm.DB, chatModel model.ToolCallingChatModel, redisClie
 		CleanupInterval: DurationFromMinutes(cfg.CleanupInterval),
 	}
 
-	coordinator := iano.NewCoordinator(chatModel, store, poolConfig)
+	coordinator := iano.NewCoordinator(chatModel, st, poolConfig)
 
 	return &ChatService{
 		db:          db,
@@ -80,9 +81,7 @@ type ChatResponse struct {
 }
 
 func (s *ChatService) Chat(ctx context.Context, req *ChatRequest, callback iano.MessageCallback) (*ChatResponse, error) {
-	opts := s.buildAgentOptions(req.Agent)
-
-	result, err := s.coordinator.ChatWithCallback(ctx, req.SessionID, req.AgentID, req.Message, callback, opts...)
+	result, err := s.coordinator.Chat(ctx, req.SessionID, req.AgentID, req.Message, callback)
 	if err != nil {
 		slog.Error("Chat failed", "error", err, "sessionID", req.SessionID)
 		return nil, err
@@ -126,11 +125,10 @@ func (s *ChatService) GetPoolStats() map[string]interface{} {
 }
 
 func (s *ChatService) GetConversationInfo(sessionID string, agentID string) (map[string]interface{}, error) {
-	agent, err := s.coordinator.GetAgent(sessionID, agentID)
-	if err != nil {
-		return nil, err
-	}
-	return agent.GetConversationInfo(), nil
+	return map[string]interface{}{
+		"sessionId": sessionID,
+		"agentId":   agentID,
+	}, nil
 }
 
 func (s *ChatService) Close() {

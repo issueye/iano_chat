@@ -3,24 +3,14 @@ import { ref, computed } from 'vue'
 
 const API_BASE = '/api'
 
-function parseResponse(response) {
-  return response.json().then(data => {
-    if (data.code !== 200) {
-      throw new Error(data.message || '请求失败')
-    }
-    return data.data
-  })
-}
-
 export const useChatStore = defineStore('chat', () => {
-  // State
   const messages = ref([])
   const sessions = ref([])
   const currentSessionId = ref(null)
   const isLoading = ref(false)
   const error = ref(null)
+  const abortController = ref(null)
 
-  // Getters
   const currentMessages = computed(() => {
     return messages.value.filter(m => String(m.session_id) === String(currentSessionId.value))
   })
@@ -29,7 +19,6 @@ export const useChatStore = defineStore('chat', () => {
     return sessions.value.find(s => String(s.id) === String(currentSessionId.value))
   })
 
-  // Actions
   function setCurrentSession(sessionId) {
     currentSessionId.value = sessionId
   }
@@ -66,7 +55,14 @@ export const useChatStore = defineStore('chat', () => {
     messages.value = messages.value.filter(m => String(m.session_id) !== String(currentSessionId.value))
   }
 
-  // Session API
+  function cancelStreaming() {
+    if (abortController.value) {
+      abortController.value.abort()
+      abortController.value = null
+    }
+    setLoading(false)
+  }
+
   async function fetchSessions() {
     try {
       const response = await fetch(`${API_BASE}/sessions`)
@@ -75,7 +71,7 @@ export const useChatStore = defineStore('chat', () => {
         sessions.value = data.data || []
       }
     } catch (err) {
-      error.value = err.message
+      setError(err.message)
     }
   }
 
@@ -95,7 +91,7 @@ export const useChatStore = defineStore('chat', () => {
         return data.data
       }
     } catch (err) {
-      error.value = err.message
+      setError(err.message)
     }
   }
 
@@ -118,20 +114,21 @@ export const useChatStore = defineStore('chat', () => {
         }
       }
     } catch (err) {
-      error.value = err.message
+      setError(err.message)
     }
   }
 
-  // Message API
   async function fetchMessagesBySession(sessionId) {
     try {
       const response = await fetch(`${API_BASE}/messages/session?session_id=${sessionId}`)
       const data = await response.json()
       if (data.code === 200) {
-        messages.value = data.data || []
+        const sessionMessages = data.data || []
+        messages.value = messages.value.filter(m => String(m.session_id) !== String(sessionId))
+        messages.value.push(...sessionMessages)
       }
     } catch (err) {
-      error.value = err.message
+      setError(err.message)
     }
   }
 
@@ -141,24 +138,169 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     const userMessage = {
+      id: Date.now().toString() + '_user',
       session_id: String(currentSessionId.value),
       type: 'user',
       content: JSON.stringify({ text: content }),
       status: 'completed'
     }
 
+    addMessage(userMessage)
+    setLoading(true)
+    clearError()
+
     try {
       const response = await fetch(`${API_BASE}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userMessage)
+        body: JSON.stringify({
+          session_id: String(currentSessionId.value),
+          type: 'user',
+          content: JSON.stringify({ text: content }),
+          status: 'completed'
+        })
       })
       const data = await response.json()
-      if (data.code === 200) {
-        messages.value.push(data.data)
+      if (data.code === 200 && data.data) {
+        const idx = messages.value.findIndex(m => m.id === userMessage.id)
+        if (idx !== -1) {
+          messages.value[idx] = { ...messages.value[idx], ...data.data }
+        }
       }
     } catch (err) {
-      error.value = err.message
+      setError(err.message)
+    }
+
+    const assistantMessageId = Date.now().toString() + '_assistant'
+    const assistantMessage = {
+      id: assistantMessageId,
+      session_id: String(currentSessionId.value),
+      type: 'assistant',
+      content: JSON.stringify({ text: '' }),
+      status: 'streaming'
+    }
+    addMessage(assistantMessage)
+
+    try {
+      const streamResponse = await fetch(`${API_BASE}/chat/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: String(currentSessionId.value),
+          message: content
+        })
+      })
+
+      if (!streamResponse.ok) {
+        throw new Error(`HTTP error! status: ${streamResponse.status}`)
+      }
+
+      const reader = streamResponse.body.getReader()
+      const decoder = new TextDecoder()
+      let accumulatedContent = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const eventData = JSON.parse(line.slice(6))
+              if (eventData.content) {
+                accumulatedContent += eventData.content
+                updateMessage(assistantMessageId, {
+                  content: JSON.stringify({ text: accumulatedContent })
+                })
+              }
+              if (eventData.error) {
+                setError(eventData.error)
+                updateMessage(assistantMessageId, { status: 'failed' })
+              }
+            } catch (e) {
+              // Ignore parse errors for incomplete JSON
+            }
+          } else if (line.startsWith('event: ')) {
+            const eventType = line.slice(7)
+            if (eventType === 'done') {
+              updateMessage(assistantMessageId, { status: 'completed' })
+            }
+          }
+        }
+      }
+
+      updateMessage(assistantMessageId, { status: 'completed' })
+
+      // Save the assistant message to the backend
+      try {
+        await fetch(`${API_BASE}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: String(currentSessionId.value),
+            type: 'assistant',
+            content: JSON.stringify({ text: accumulatedContent }),
+            status: 'completed'
+          })
+        })
+      } catch (e) {
+        // Silent fail for saving
+      }
+
+    } catch (err) {
+      setError(err.message)
+      updateMessage(assistantMessageId, { status: 'failed' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function sendMessageNonStreaming(content) {
+    if (!currentSessionId.value) {
+      await createSession()
+    }
+
+    const userMessage = {
+      id: Date.now().toString() + '_user',
+      session_id: String(currentSessionId.value),
+      type: 'user',
+      content: JSON.stringify({ text: content }),
+      status: 'completed'
+    }
+
+    addMessage(userMessage)
+    setLoading(true)
+    clearError()
+
+    try {
+      const response = await fetch(`${API_BASE}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: String(currentSessionId.value),
+          message: content
+        })
+      })
+      const data = await response.json()
+      if (data.code === 200 && data.data) {
+        const assistantMessage = {
+          id: Date.now().toString() + '_assistant',
+          session_id: String(currentSessionId.value),
+          type: 'assistant',
+          content: JSON.stringify({ text: data.data.content }),
+          status: 'completed'
+        }
+        addMessage(assistantMessage)
+      } else {
+        throw new Error(data.message || 'Chat failed')
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -177,11 +319,13 @@ export const useChatStore = defineStore('chat', () => {
     setError,
     clearError,
     clearCurrentSession,
+    cancelStreaming,
     fetchSessions,
     createSession,
     switchSession,
     deleteSession,
     fetchMessagesBySession,
-    sendMessage
+    sendMessage,
+    sendMessageNonStreaming
   }
 })
