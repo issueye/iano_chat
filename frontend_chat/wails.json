@@ -1,0 +1,28 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "iano_chat",
+  "outputfilename": "iano_chat",
+  "frontend": {
+    "dir": "./frontend",
+    "install": "npm install",
+    "build": "npm run build",
+    "dev": "npm run dev",
+    "package": "npm run build"
+  },
+  "author": {
+    "name": "iano_chat",
+    "email": "dev@iano_chat.com"
+  },
+  "info": {
+    "company": "iano_chat",
+    "productName": "iano_chat",
+    "copyright": "Copyright © 2024",
+    "comments": "Built using Wails"
+  },
+  "bindings": {
+    "ts_generation": {
+      "outputType": "interfaces"
+    }
+  },
+  "wailsjsDir": "./frontend/src/lib/wails"
+}

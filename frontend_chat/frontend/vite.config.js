@@ -11,12 +11,22 @@ export default defineConfig({
     }
   },
   server: {
-    port: 5173,
+    port: 34115,
+    strictPort: true,
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '/api')
+      }
+    }
+  },
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
       }
     }
   }
