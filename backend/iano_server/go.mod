@@ -12,6 +12,8 @@ require (
 	github.com/spf13/viper v1.21.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gorm.io/gorm v1.31.1
+	iano_agent v0.0.0
+	iano_script_engine v0.0.0
 )
 
 require (

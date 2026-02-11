@@ -18,7 +18,7 @@ func (s *SessionService) Create(session *models.Session) error {
 	return s.db.Create(session).Error
 }
 
-func (s *SessionService) GetByID(id int64) (*models.Session, error) {
+func (s *SessionService) GetByID(id string) (*models.Session, error) {
 	var session models.Session
 	if err := s.db.First(&session, "id = ?", id).Error; err != nil {
 		return nil, err
@@ -42,7 +42,7 @@ func (s *SessionService) GetByStatus(status models.SessionStatus) ([]models.Sess
 	return sessions, nil
 }
 
-func (s *SessionService) Update(id int64, updates map[string]interface{}) (*models.Session, error) {
+func (s *SessionService) Update(id string, updates map[string]interface{}) (*models.Session, error) {
 	var session models.Session
 	if err := s.db.First(&session, "id = ?", id).Error; err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func (s *SessionService) Update(id int64, updates map[string]interface{}) (*mode
 	return &session, nil
 }
 
-func (s *SessionService) Delete(id int64) error {
+func (s *SessionService) Delete(id string) error {
 	result := s.db.Delete(&models.Session{}, "id = ?", id)
 	if result.Error != nil {
 		return result.Error

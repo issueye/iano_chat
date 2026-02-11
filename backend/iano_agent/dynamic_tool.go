@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	script_engine "iano_script_engine"
+
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
-	script_engine "iano_script_engine"
 )
 
 type DynamicTool struct {
