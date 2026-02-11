@@ -41,6 +41,7 @@ const fields = [
       { key: 'max_tokens', label: 'Max Tokens', type: 'number', min: 1, default: 4096 },
     ],
   },
+  { key: 'is_default', label: '设为默认', type: 'switch', switchLabel: '作为聊天默认供应商', default: false },
 ]
 
 watch(() => props.open, (val) => {

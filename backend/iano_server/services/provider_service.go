@@ -15,6 +15,9 @@ func NewProviderService(db *gorm.DB) *ProviderService {
 }
 
 func (s *ProviderService) Create(provider *models.Provider) error {
+	if provider.IsDefault {
+		s.db.Model(&models.Provider{}).Where("is_default = ?", true).Update("is_default", false)
+	}
 	return s.db.Create(provider).Error
 }
 
@@ -39,6 +42,11 @@ func (s *ProviderService) Update(id string, updates map[string]interface{}) (*mo
 	if err := s.db.First(&provider, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
+
+	if isDefault, ok := updates["is_default"]; ok && isDefault == true {
+		s.db.Model(&models.Provider{}).Where("is_default = ? AND id != ?", true, id).Update("is_default", false)
+	}
+
 	if err := s.db.Model(&provider).Updates(updates).Error; err != nil {
 		return nil, err
 	}
@@ -62,4 +70,12 @@ func (s *ProviderService) Count() (int64, error) {
 		return 0, err
 	}
 	return count, nil
+}
+
+func (s *ProviderService) GetDefault() (*models.Provider, error) {
+	var provider models.Provider
+	if err := s.db.Where("is_default = ?", true).First(&provider).Error; err != nil {
+		return nil, err
+	}
+	return &provider, nil
 }

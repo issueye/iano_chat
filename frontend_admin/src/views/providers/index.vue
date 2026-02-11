@@ -25,11 +25,11 @@
       </Card>
       <Card>
         <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle class="text-sm font-medium">已配置</CardTitle>
-          <CheckCircle2 class="h-4 w-4 text-green-500" />
+          <CardTitle class="text-sm font-medium">默认供应商</CardTitle>
+          <Star class="h-4 w-4 text-yellow-500" />
         </CardHeader>
         <CardContent>
-          <div class="text-2xl font-bold text-green-600">{{ providerStore.totalCount }}</div>
+          <div class="text-2xl font-bold text-yellow-600">{{ defaultProviderName }}</div>
         </CardContent>
       </Card>
       <Card>
@@ -59,8 +59,12 @@
               <div class="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
                 <Building2 class="h-4 w-4 text-muted-foreground" />
               </div>
-              <div>
+              <div class="flex items-center gap-2">
                 <p class="font-medium">{{ row.name }}</p>
+                <Badge v-if="row.is_default" variant="default" class="text-xs">
+                  <Star class="h-3 w-3 mr-1" />
+                  默认
+                </Badge>
               </div>
             </div>
           </template>
@@ -77,6 +81,11 @@
           
           <template #actions="{ row }">
             <div class="flex items-center gap-1">
+              <Tooltip v-if="!row.is_default" content="设为默认">
+                <Button variant="ghost" size="icon-sm" @click="handleSetDefault(row)">
+                  <Star class="h-4 w-4" />
+                </Button>
+              </Tooltip>
               <Tooltip content="编辑">
                 <Button variant="ghost" size="icon-sm" @click="handleEdit(row)">
                   <Pencil class="h-4 w-4" />
@@ -112,8 +121,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue"
+import { ref, computed, onMounted } from "vue"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardContent,
@@ -125,7 +135,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { Tooltip } from "@/components/ui/tooltip"
 import { AlertDialog } from "@/components/ui/alert-dialog"
 import ProviderFormDialog from "./components/ProviderFormDialog.vue"
-import { Plus, Pencil, Trash2, Building2, CheckCircle2, Activity } from "lucide-vue-next"
+import { Plus, Pencil, Trash2, Building2, Activity, Star } from "lucide-vue-next"
 import { formatDatetime } from "@/lib/utils"
 import { useProviderStore } from "@/stores"
 
@@ -136,13 +146,17 @@ const columns = [
   { key: "base_url", title: "API Base URL" },
   { key: "model", title: "模型名称", width: "150px", align: "center" },
   { key: "created_at", title: "创建时间", width: "180px", slot: "created_at" },
-  { title: "操作", slot: "actions", width: "100px", align: "center" },
+  { title: "操作", slot: "actions", width: "120px", align: "center" },
 ]
 
 const formDialogOpen = ref(false)
 const editingItem = ref(null)
 const deleteDialogOpen = ref(false)
 const deletingItem = ref(null)
+
+const defaultProviderName = computed(() => 
+  providerStore.defaultProvider?.name || "未设置"
+)
 
 function handleAdd() {
   editingItem.value = null
@@ -152,6 +166,14 @@ function handleAdd() {
 function handleEdit(item) {
   editingItem.value = item
   formDialogOpen.value = true
+}
+
+async function handleSetDefault(item) {
+  try {
+    await providerStore.setDefault(item.id)
+  } catch (error) {
+    alert(error.message || "设置失败")
+  }
 }
 
 function handleDelete(item) {

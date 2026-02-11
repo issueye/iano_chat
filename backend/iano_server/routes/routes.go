@@ -95,6 +95,7 @@ func SetupRoutes(db *gorm.DB) *web.Engine {
 
 	engine.POST("/api/providers", providerController.Create)
 	engine.GET("/api/providers", providerController.GetAll)
+	engine.GET("/api/providers/default", providerController.GetDefault)
 	engine.GET("/api/providers/:id", providerController.GetByID)
 	engine.PUT("/api/providers/:id", providerController.Update)
 	engine.DELETE("/api/providers/:id", providerController.Delete)

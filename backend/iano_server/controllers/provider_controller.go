@@ -22,6 +22,7 @@ type CreateProviderRequest struct {
 	Model       string  `json:"model" binding:"required"`
 	Temperature float32 `json:"temperature"`
 	MaxTokens   int     `json:"max_tokens"`
+	IsDefault   bool    `json:"is_default"`
 }
 
 type UpdateProviderRequest struct {
@@ -31,6 +32,7 @@ type UpdateProviderRequest struct {
 	Model       *string  `json:"model,omitempty"`
 	Temperature *float32 `json:"temperature,omitempty"`
 	MaxTokens   *int     `json:"max_tokens,omitempty"`
+	IsDefault   *bool    `json:"is_default,omitempty"`
 }
 
 func (c *ProviderController) Create(ctx *web.Context) {
@@ -47,9 +49,9 @@ func (c *ProviderController) Create(ctx *web.Context) {
 		Model:       req.Model,
 		Temperature: req.Temperature,
 		MaxTokens:   req.MaxTokens,
+		IsDefault:   req.IsDefault,
 	}
 
-	// 生成ID
 	provider.NewID()
 
 	if err := c.providerService.Create(provider); err != nil {
@@ -78,6 +80,15 @@ func (c *ProviderController) GetAll(ctx *web.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, models.Success(providers))
+}
+
+func (c *ProviderController) GetDefault(ctx *web.Context) {
+	provider, err := c.providerService.GetDefault()
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, models.Fail("Default provider not found"))
+		return
+	}
+	ctx.JSON(http.StatusOK, models.Success(provider))
 }
 
 func (c *ProviderController) Update(ctx *web.Context) {
@@ -113,6 +124,9 @@ func (c *ProviderController) Update(ctx *web.Context) {
 			Int:   *req.MaxTokens,
 			Valid: *req.MaxTokens != 0,
 		}
+	}
+	if req.IsDefault != nil {
+		updates["is_default"] = *req.IsDefault
 	}
 
 	provider, err := c.providerService.Update(id, updates)

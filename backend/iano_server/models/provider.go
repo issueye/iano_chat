@@ -1,6 +1,5 @@
 package models
 
-// 供应商
 type Provider struct {
 	BaseModel
 	Name        string  `json:"name"`
@@ -9,6 +8,7 @@ type Provider struct {
 	Model       string  `json:"model"`
 	Temperature float32 `json:"temperature"`
 	MaxTokens   int     `json:"max_tokens"`
+	IsDefault   bool    `gorm:"default:false" json:"is_default"`
 }
 
 func (table *Provider) TableName() string {

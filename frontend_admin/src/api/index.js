@@ -41,6 +41,7 @@ export const api = {
 export const providerApi = {
   getAll: () => api.get('/providers'),
   getById: (id) => api.get(`/providers/${id}`),
+  getDefault: () => api.get('/providers/default'),
   create: (data) => api.post('/providers', data),
   update: (id, data) => api.put(`/providers/${id}`, data),
   delete: (id) => api.delete(`/providers/${id}`),
