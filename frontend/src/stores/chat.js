@@ -183,7 +183,7 @@ export const useChatStore = defineStore('chat', () => {
       id: assistantMessageId,
       session_id: String(currentSessionId.value),
       type: 'assistant',
-      content: JSON.stringify({ text: '' }),
+      content: JSON.stringify({ text: '', tool_calls: [] }),
       status: 'streaming'
     }
     addMessage(assistantMessage)
@@ -206,6 +206,7 @@ export const useChatStore = defineStore('chat', () => {
       const reader = streamResponse.body.getReader()
       const decoder = new TextDecoder()
       let accumulatedContent = ''
+      let accumulatedToolCalls = []
 
       while (true) {
         const { done, value } = await reader.read()
@@ -220,10 +221,23 @@ export const useChatStore = defineStore('chat', () => {
               const eventData = JSON.parse(line.slice(6))
               if (eventData.content) {
                 accumulatedContent += eventData.content
-                updateMessage(assistantMessageId, {
-                  content: JSON.stringify({ text: accumulatedContent })
+              }
+              if (eventData.id && eventData.name) {
+                accumulatedToolCalls.push({
+                  id: eventData.id,
+                  type: 'function',
+                  function: {
+                    name: eventData.name,
+                    arguments: eventData.arguments
+                  }
                 })
               }
+              updateMessage(assistantMessageId, {
+                content: JSON.stringify({
+                  text: accumulatedContent,
+                  tool_calls: accumulatedToolCalls
+                })
+              })
               if (eventData.error) {
                 setError(eventData.error)
                 updateMessage(assistantMessageId, { status: 'failed' })

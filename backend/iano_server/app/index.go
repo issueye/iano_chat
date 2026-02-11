@@ -9,7 +9,6 @@ import (
 	"iano_server/services"
 	web "iano_web"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -108,10 +107,10 @@ func (a *App) InitRootDirs() error {
 
 func (a *App) Start() error {
 	a.AgentService = services.NewAgentService(a.DB)
-	a.WebEngine = routes.SetupRoutes(a.DB)
-	a.WebEngine.Start() // 如果是 debug 模式，会打印路由信息
+	a.WebEngine = routes.SetupRoutes(a.DB, a.cfg)
+	a.WebEngine.Start()
 	a.Log.Info("服务启动", slog.String("port", a.cfg.Server.Port))
-	if err := http.ListenAndServe(":"+a.cfg.Server.Port, a.WebEngine); err != nil {
+	if err := a.WebEngine.Run(":" + a.cfg.Server.Port); err != nil {
 		a.Log.Error("服务启动失败", slog.String("error", err.Error()))
 		return err
 	}

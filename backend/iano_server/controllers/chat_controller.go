@@ -202,12 +202,36 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 	c.messageService.Create(userMsg)
 
 	var accumulatedContent string
-	callback := func(content string, isToolCall bool) {
-		accumulatedContent += content
-		sse.EmitEvent("message", map[string]interface{}{
-			"content":      content,
-			"is_tool_call": isToolCall,
-		})
+	var accumulatedToolCalls []models.ToolCall
+	callback := func(content string, isToolCall bool, toolCalls []iano.ToolCallInfo) {
+		if content != "" {
+			accumulatedContent += content
+			sse.EmitEvent("message", map[string]interface{}{
+				"content":      content,
+				"is_tool_call": isToolCall,
+			})
+		}
+		if len(toolCalls) > 0 {
+			for _, tc := range toolCalls {
+				toolCall := models.ToolCall{
+					ID:   tc.ID,
+					Type: "function",
+					Function: struct {
+						Name      string `json:"name"`
+						Arguments string `json:"arguments"`
+					}{
+						Name:      tc.Name,
+						Arguments: tc.Arguments,
+					},
+				}
+				accumulatedToolCalls = append(accumulatedToolCalls, toolCall)
+				sse.EmitEvent("tool_call", map[string]interface{}{
+					"id":        tc.ID,
+					"name":      tc.Name,
+					"arguments": tc.Arguments,
+				})
+			}
+		}
 	}
 
 	_, err = c.agentManagerService.Chat(ctx.Request.Context(), agentID, req.Message, iano.MessageCallback(callback))
@@ -220,7 +244,11 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 			Status:    models.MessageStatusCompleted,
 		}
 		assistantMsg.NewID()
-		if err := assistantMsg.SetText(accumulatedContent); err != nil {
+		msgContent := &models.MessageContent{
+			Text:      accumulatedContent,
+			ToolCalls: accumulatedToolCalls,
+		}
+		if err := assistantMsg.SetContent(msgContent); err != nil {
 			assistantMsg.Content = accumulatedContent
 		}
 		c.messageService.Create(assistantMsg)

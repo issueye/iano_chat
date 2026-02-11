@@ -3,8 +3,10 @@ package routes
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"iano_server/controllers"
+	"iano_server/pkg/config"
 	"iano_server/services"
 	web "iano_web"
 	webMiddleware "iano_web/middleware"
@@ -12,9 +14,12 @@ import (
 	"gorm.io/gorm"
 )
 
-func SetupRoutes(db *gorm.DB) *web.Engine {
+func SetupRoutes(db *gorm.DB, cfg *config.Config) *web.Engine {
 	engine := web.New()
-	engine.SetMode("debug")
+	engine.SetMode(cfg.Server.Mode)
+	engine.SetReadTimeout(time.Duration(cfg.Server.ReadTimeout) * time.Second)
+	engine.SetWriteTimeout(time.Duration(cfg.Server.WriteTimeout) * time.Second)
+	engine.SetGracefulShutdown(true)
 
 	engine.Use(webMiddleware.Recovery())
 	engine.Use(webMiddleware.Logger())

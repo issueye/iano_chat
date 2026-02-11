@@ -55,6 +55,7 @@ func (a *Agent) Chat(ctx context.Context, userInput string) (string, error) {
 	}
 
 	var fullResponse string
+	var allToolCalls []ToolCallInfo
 	isToolCall := false
 
 	for {
@@ -69,15 +70,26 @@ func (a *Agent) Chat(ctx context.Context, userInput string) (string, error) {
 
 		if len(msg.ToolCalls) > 0 {
 			isToolCall = true
+			for _, tc := range msg.ToolCalls {
+				allToolCalls = append(allToolCalls, ToolCallInfo{
+					ID:        tc.ID,
+					Name:      tc.Function.Name,
+					Arguments: tc.Function.Arguments,
+				})
+			}
 		}
 
 		if msg.Content != "" {
 			fullResponse += msg.Content
 
 			if callback != nil {
-				callback(msg.Content, isToolCall)
+				callback(msg.Content, isToolCall, nil)
 			}
 		}
+	}
+
+	if callback != nil && len(allToolCalls) > 0 {
+		callback("", true, allToolCalls)
 	}
 
 	a.mu.Lock()
@@ -112,6 +124,7 @@ func (a *Agent) ChatWithHistory(ctx context.Context, messages []*schema.Message)
 	}
 
 	var fullResponse string
+	var allToolCalls []ToolCallInfo
 	for {
 		msg, err := msgReader.Recv()
 		if err != nil {
@@ -121,12 +134,26 @@ func (a *Agent) ChatWithHistory(ctx context.Context, messages []*schema.Message)
 			return "", fmt.Errorf("流式对话接收消息失败: %w", err)
 		}
 
+		if len(msg.ToolCalls) > 0 {
+			for _, tc := range msg.ToolCalls {
+				allToolCalls = append(allToolCalls, ToolCallInfo{
+					ID:        tc.ID,
+					Name:      tc.Function.Name,
+					Arguments: tc.Function.Arguments,
+				})
+			}
+		}
+
 		if msg.Content != "" {
 			fullResponse += msg.Content
 			if a.config.Callback != nil {
-				a.config.Callback(msg.Content, len(msg.ToolCalls) > 0)
+				a.config.Callback(msg.Content, len(msg.ToolCalls) > 0, nil)
 			}
 		}
+	}
+
+	if a.config.Callback != nil && len(allToolCalls) > 0 {
+		a.config.Callback("", true, allToolCalls)
 	}
 
 	a.lastActiveAt = time.Now()

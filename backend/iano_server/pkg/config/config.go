@@ -14,8 +14,10 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port string `mapstructure:"port"`
-	Mode string `mapstructure:"mode"`
+	Port         string `mapstructure:"port"`
+	Mode         string `mapstructure:"mode"`
+	ReadTimeout  int    `mapstructure:"read_timeout"`
+	WriteTimeout int    `mapstructure:"write_timeout"`
 }
 
 type DatabaseConfig struct {
@@ -52,6 +54,8 @@ func Load(path string) *Config {
 
 	viper.SetDefault("server.port", "8080")
 	viper.SetDefault("server.mode", "debug")
+	viper.SetDefault("server.read_timeout", 300)
+	viper.SetDefault("server.write_timeout", 300)
 	viper.SetDefault("database.name", "root/data/iano_chat.db")
 	viper.SetDefault("database.max_open_conns", 25)
 	viper.SetDefault("database.max_idle_conns", 5)

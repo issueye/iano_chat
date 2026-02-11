@@ -5,7 +5,13 @@ import (
 	"time"
 )
 
-type MessageCallback func(content string, isToolCall bool)
+type ToolCallInfo struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
+}
+
+type MessageCallback func(content string, isToolCall bool, toolCalls []ToolCallInfo)
 
 type TokenUsage struct {
 	TotalTokens      int64
