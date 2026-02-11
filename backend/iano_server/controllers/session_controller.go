@@ -18,7 +18,6 @@ func NewSessionController(sessionService *services.SessionService) *SessionContr
 }
 
 type CreateSessionRequest struct {
-	KeyID string `json:"key_id"`
 	Title string `json:"title"`
 }
 
@@ -72,21 +71,6 @@ func (c *SessionController) GetByID(ctx *web.Context) {
 
 func (c *SessionController) GetAll(ctx *web.Context) {
 	sessions, err := c.sessionService.GetAll()
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
-		return
-	}
-	ctx.JSON(http.StatusOK, models.Success(sessions))
-}
-
-func (c *SessionController) GetByKeyID(ctx *web.Context) {
-	keyIDStr := ctx.Query("key_id")
-	if keyIDStr == "" {
-		ctx.JSON(http.StatusBadRequest, models.Fail("key_id is required"))
-		return
-	}
-
-	sessions, err := c.sessionService.GetByKeyID(keyIDStr)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
 		return
@@ -199,20 +183,6 @@ func (c *SessionController) Delete(ctx *web.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, models.Success(map[string]string{"message": "Session deleted successfully"}))
-}
-
-func (c *SessionController) DeleteByKeyID(ctx *web.Context) {
-	keyIDStr := ctx.Query("key_id")
-	if keyIDStr == "" {
-		ctx.JSON(http.StatusBadRequest, models.Fail("key_id is required"))
-		return
-	}
-
-	if err := c.sessionService.DeleteByKeyID(keyIDStr); err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
-		return
-	}
-	ctx.JSON(http.StatusOK, models.Success(map[string]string{"message": "Sessions deleted successfully"}))
 }
 
 func (c *SessionController) GetConfig(ctx *web.Context) {

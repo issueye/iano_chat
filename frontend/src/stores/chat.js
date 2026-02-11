@@ -85,7 +85,6 @@ export const useChatStore = defineStore('chat', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          key_id: 'default',
           title: title || '新会话'
         })
       })
@@ -143,7 +142,6 @@ export const useChatStore = defineStore('chat', () => {
 
     const userMessage = {
       session_id: String(currentSessionId.value),
-      key_id: 'default',
       type: 'user',
       content: JSON.stringify({ text: content }),
       status: 'completed'

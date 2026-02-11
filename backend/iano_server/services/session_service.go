@@ -34,14 +34,6 @@ func (s *SessionService) GetAll() ([]models.Session, error) {
 	return sessions, nil
 }
 
-func (s *SessionService) GetByKeyID(keyID string) ([]models.Session, error) {
-	var sessions []models.Session
-	if err := s.db.Where("key_id = ?", keyID).Find(&sessions).Error; err != nil {
-		return nil, err
-	}
-	return sessions, nil
-}
-
 func (s *SessionService) GetByStatus(status models.SessionStatus) ([]models.Session, error) {
 	var sessions []models.Session
 	if err := s.db.Where("status = ?", status).Find(&sessions).Error; err != nil {
@@ -72,21 +64,9 @@ func (s *SessionService) Delete(id int64) error {
 	return nil
 }
 
-func (s *SessionService) DeleteByKeyID(keyID string) error {
-	return s.db.Where("key_id = ?", keyID).Delete(&models.Session{}).Error
-}
-
 func (s *SessionService) Count() (int64, error) {
 	var count int64
 	if err := s.db.Model(&models.Session{}).Count(&count).Error; err != nil {
-		return 0, err
-	}
-	return count, nil
-}
-
-func (s *SessionService) CountByKeyID(keyID string) (int64, error) {
-	var count int64
-	if err := s.db.Model(&models.Session{}).Where("key_id = ?", keyID).Count(&count).Error; err != nil {
 		return 0, err
 	}
 	return count, nil

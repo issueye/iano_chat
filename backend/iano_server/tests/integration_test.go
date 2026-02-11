@@ -65,7 +65,6 @@ func TestIntegrationCompleteWorkflow(t *testing.T) {
 	// 2. 创建一个 Session
 	t.Run("Step2_CreateSession", func(t *testing.T) {
 		reqBody := `{
-			"user_id": 1,
 			"title": "Integration Test Session",
 			"status": "active"
 		}`

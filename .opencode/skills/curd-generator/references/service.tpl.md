@@ -37,14 +37,6 @@ func (s *{ModelName}Service) GetAll() ([]models.{ModelName}, error) {
 	return {modelVar}s, nil
 }
 
-func (s *{ModelName}Service) GetByUserID(userID int64) ([]models.{ModelName}, error) {
-	var {modelVar}s []models.{ModelName}
-	if err := s.db.Where("user_id = ?", userID).Find(&{modelVar}s).Error; err != nil {
-		return nil, err
-	}
-	return {modelVar}s, nil
-}
-
 func (s *{ModelName}Service) Update(id int64, updates map[string]interface{}) (*models.{ModelName}, error) {
 	var {modelVar} models.{ModelName}
 	if err := s.db.First(&{modelVar}, "id = ?", id).Error; err != nil {

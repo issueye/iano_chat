@@ -65,7 +65,7 @@
 
             <!-- Messages Area -->
             <ScrollArea class="flex-1 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-                <div class="max-w-2xl mx-auto space-y-6 pb-20">
+                <div class="mx-auto space-y-6 pb-20">
                     <!-- Welcome Screen -->
                     <div
                         v-if="!chatStore.messages.length"

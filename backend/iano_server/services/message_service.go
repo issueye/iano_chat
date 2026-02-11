@@ -34,17 +34,9 @@ func (s *MessageService) GetAll() ([]models.Message, error) {
 	return messages, nil
 }
 
-func (s *MessageService) GetBySessionID(sessionID int64) ([]models.Message, error) {
+func (s *MessageService) GetBySessionID(sessionID string) ([]models.Message, error) {
 	var messages []models.Message
 	if err := s.db.Where("session_id = ?", sessionID).Order("created_at ASC").Find(&messages).Error; err != nil {
-		return nil, err
-	}
-	return messages, nil
-}
-
-func (s *MessageService) GetByKeyID(keyID string) ([]models.Message, error) {
-	var messages []models.Message
-	if err := s.db.Where("key_id = ?", keyID).Order("created_at DESC").Find(&messages).Error; err != nil {
 		return nil, err
 	}
 	return messages, nil

@@ -27,7 +27,6 @@ func TestMessageController(t *testing.T) {
 	t.Run("Create Message", func(t *testing.T) {
 		reqBody := `{
 			"session_id": "` + testSessionID + `",
-			"key_id": "test-key-id",
 			"type": "user",
 			"content": "{\"text\": \"Hello, this is a test message\"}",
 			"status": "completed"

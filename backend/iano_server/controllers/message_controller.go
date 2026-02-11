@@ -18,7 +18,6 @@ func NewMessageController(messageService *services.MessageService) *MessageContr
 
 type CreateMessageRequest struct {
 	SessionID string  `json:"session_id"`
-	KeyID     string  `json:"key_id"`
 	Type      string  `json:"type"`
 	Content   string  `json:"content"`
 	Status    string  `json:"status"`
@@ -95,13 +94,7 @@ func (c *MessageController) GetBySessionID(ctx *web.Context) {
 		return
 	}
 
-	sessionID, err := strconv.ParseInt(sessionIDStr, 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Fail("invalid session_id"))
-		return
-	}
-
-	messages, err := c.messageService.GetBySessionID(sessionID)
+	messages, err := c.messageService.GetBySessionID(sessionIDStr)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
 		return

@@ -519,7 +519,6 @@
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
 | session_id | string | 是 | 会话 ID |
-| key_id | string | 是 | Key ID |
 | type | string | 是 | 消息类型 (user/assistant/system/tool) |
 | content | string | 是 | 消息内容 |
 | status | string | 否 | 消息状态 (sending/completed/failed/streaming)，默认 completed |
@@ -529,7 +528,6 @@
 ```json
 {
   "session_id": "session_001",
-  "key_id": "key_001",
   "type": "user",
   "content": "你好，请帮我查询天气",
   "status": "completed",
@@ -783,13 +781,11 @@
 **请求参数** (JSON Body):
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| key_id | string | 是 | Key ID |
 | title | string | 否 | 会话标题，默认 "新会话" |
 
 **请求示例**:
 ```json
 {
-  "key_id": "key_001",
   "title": "我的第一个会话"
 }
 ```
@@ -1026,28 +1022,6 @@
   "message": "success",
   "data": {
     "message": "Session deleted successfully"
-  }
-}
-```
-
-### 5.9 按 Key ID 删除 Sessions
-
-- **接口路径**: `/api/sessions`
-- **请求方式**: `DELETE`
-- **功能说明**: 删除指定 Key ID 的所有会话
-
-**查询参数**:
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| key_id | string | 是 | Key ID |
-
-**响应示例** (200 OK):
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "message": "Sessions deleted successfully"
   }
 }
 ```

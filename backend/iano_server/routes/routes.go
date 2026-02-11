@@ -66,7 +66,6 @@ func SetupRoutes(db *gorm.DB) *web.Engine {
 	engine.GET("/api/sessions/:id", sessionController.GetByID)
 	engine.PUT("/api/sessions/:id", sessionController.Update)
 	engine.DELETE("/api/sessions/:id", sessionController.Delete)
-	engine.DELETE("/api/sessions", sessionController.DeleteByKeyID)
 	engine.GET("/api/sessions/:id/config", sessionController.GetConfig)
 	engine.PUT("/api/sessions/:id/config", sessionController.UpdateConfig)
 
