@@ -2,6 +2,7 @@ package tests
 
 import (
 	"iano_server/models"
+	"iano_server/pkg/config"
 	"iano_server/routes"
 	"iano_server/services"
 	"net/http"
@@ -17,9 +18,9 @@ func TestToolController(t *testing.T) {
 		t.Fatalf("Failed to create test database: %v", err)
 	}
 	defer testDB.Close()
-
+	config := config.Load("")
 	// 创建路由引擎
-	engine := routes.SetupRoutes(testDB.DB)
+	engine := routes.SetupRoutes(testDB.DB, config)
 
 	t.Run("Create Tool", func(t *testing.T) {
 		reqBody := `{

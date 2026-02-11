@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"iano_server/controllers"
 	"iano_server/models"
+	"iano_server/pkg/config"
 	"iano_server/routes"
 	"iano_server/services"
 	"net/http"
@@ -19,9 +20,9 @@ func TestAgentController(t *testing.T) {
 		t.Fatalf("Failed to create test database: %v", err)
 	}
 	defer testDB.Close()
-
+	config := config.Load("")
 	// 创建路由引擎
-	engine := routes.SetupRoutes(testDB.DB)
+	engine := routes.SetupRoutes(testDB.DB, config)
 
 	t.Run("Create Agent", func(t *testing.T) {
 		reqBody := `{

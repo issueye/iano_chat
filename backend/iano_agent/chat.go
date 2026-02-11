@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iano_agent/callback"
 	"io"
 	"log/slog"
 	"time"
@@ -162,7 +163,7 @@ func (a *Agent) ChatWithHistory(ctx context.Context, messages []*schema.Message)
 
 func (a *Agent) MakeStreamOpts() []agent.AgentOption {
 	return []agent.AgentOption{
-		agent.WithComposeOptions(compose.WithCallbacks(&LogCallbackHandler{})),
+		agent.WithComposeOptions(compose.WithCallbacks(&callback.LogCallbackHandler{})),
 	}
 }
 

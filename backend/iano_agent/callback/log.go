@@ -1,4 +1,4 @@
-package iano_agent
+package callback
 
 import (
 	"context"
@@ -68,8 +68,20 @@ func (cb *LogCallbackHandler) OnEndWithStreamOutput(ctx context.Context, info *c
 				return
 			}
 
+			// 解析 frame 中的 response_meta 字段
+			var reactAgentOut ReActAgentOut
+			err = json.Unmarshal(s, &reactAgentOut)
+			if err != nil {
+				fmt.Printf("internal error: %s\n", err)
+				return
+			}
+
 			if info.Name == graphInfoName { // 仅打印 graph 的输出, 否则每个 stream 节点的输出都会打印一遍
-				fmt.Printf("%s: %s\n", info.Name, string(s))
+				fmt.Printf("AGENT[%s]: %s\n", info.Name, string(s))
+
+				if reactAgentOut.ResponseMeta.FinishReason == "stop" {
+					fmt.Printf("AGENT_STOP[%s]: %s\n", info.Name, reactAgentOut.Content)
+				}
 			}
 		}
 

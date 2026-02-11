@@ -174,7 +174,8 @@
                     <ChatInput
                         :is-loading="chatStore.isLoading"
                         :agents="chatStore.mainAgents"
-                        v-model="chatStore.currentAgentId"
+                        :model-value="chatStore.currentAgentId"
+                        @update:model-value="chatStore.setCurrentAgent"
                         @send="handleSendMessage"
                     />
                 </div>

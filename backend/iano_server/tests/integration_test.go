@@ -2,6 +2,7 @@ package tests
 
 import (
 	"iano_server/models"
+	"iano_server/pkg/config"
 	"iano_server/routes"
 	"iano_server/services"
 	"net/http"
@@ -18,7 +19,8 @@ func TestHealthCheck(t *testing.T) {
 	}
 	defer testDB.Close()
 
-	engine := routes.SetupRoutes(testDB.DB)
+	config := config.Load("")
+	engine := routes.SetupRoutes(testDB.DB, config)
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	rr := httptest.NewRecorder()
@@ -35,8 +37,8 @@ func TestIntegrationCompleteWorkflow(t *testing.T) {
 		t.Fatalf("Failed to create test database: %v", err)
 	}
 	defer testDB.Close()
-
-	engine := routes.SetupRoutes(testDB.DB)
+	config := config.Load("")
+	engine := routes.SetupRoutes(testDB.DB, config)
 
 	// 1. 创建一个 Agent
 	t.Run("Step1_CreateAgent", func(t *testing.T) {
@@ -189,8 +191,8 @@ func TestErrorHandling(t *testing.T) {
 		t.Fatalf("Failed to create test database: %v", err)
 	}
 	defer testDB.Close()
-
-	engine := routes.SetupRoutes(testDB.DB)
+	config := config.Load("")
+	engine := routes.SetupRoutes(testDB.DB, config)
 
 	t.Run("InvalidJSON", func(t *testing.T) {
 		reqBody := `{"invalid json}`
