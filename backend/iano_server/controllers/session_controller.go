@@ -6,7 +6,6 @@ import (
 	"iano_server/services"
 	web "iano_web"
 	"net/http"
-	"strconv"
 )
 
 type SessionController struct {
@@ -54,12 +53,7 @@ func (c *SessionController) Create(ctx *web.Context) {
 }
 
 func (c *SessionController) GetByID(ctx *web.Context) {
-	idStr := ctx.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Fail("invalid id"))
-		return
-	}
+	id := ctx.Param("id")
 
 	session, err := c.sessionService.GetByID(id)
 	if err != nil {
@@ -94,12 +88,7 @@ func (c *SessionController) GetByStatus(ctx *web.Context) {
 }
 
 func (c *SessionController) Update(ctx *web.Context) {
-	idStr := ctx.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Fail("invalid id"))
-		return
-	}
+	id := ctx.Param("id")
 
 	var req UpdateSessionRequest
 	if err := ctx.Bind(&req); err != nil {
@@ -133,12 +122,7 @@ func (c *SessionController) Update(ctx *web.Context) {
 }
 
 func (c *SessionController) UpdateConfig(ctx *web.Context) {
-	idStr := ctx.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Fail("invalid id"))
-		return
-	}
+	id := ctx.Param("id")
 
 	var req UpdateSessionConfigRequest
 	if err := ctx.BindAndValidate(&req); err != nil {
@@ -171,12 +155,7 @@ func (c *SessionController) UpdateConfig(ctx *web.Context) {
 }
 
 func (c *SessionController) Delete(ctx *web.Context) {
-	idStr := ctx.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Fail("invalid id"))
-		return
-	}
+	id := ctx.Param("id")
 
 	if err := c.sessionService.Delete(id); err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
@@ -186,12 +165,7 @@ func (c *SessionController) Delete(ctx *web.Context) {
 }
 
 func (c *SessionController) GetConfig(ctx *web.Context) {
-	idStr := ctx.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Fail("invalid id"))
-		return
-	}
+	id := ctx.Param("id")
 
 	session, err := c.sessionService.GetByID(id)
 	if err != nil {

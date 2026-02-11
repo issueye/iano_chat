@@ -16,10 +16,10 @@ import (
 
 // 默认 HTTP 客户端配置
 const (
-	defaultTimeout         = 30 * time.Second
-	defaultMaxIdleConns    = 100
-	defaultMaxConnsPerHost = 10
-	defaultIdleConnTimeout = 90 * time.Second
+	httpClientTimeout         = 30 * time.Second
+	httpClientMaxIdleConns    = 100
+	httpClientMaxConnsPerHost = 10
+	httpClientIdleConnTimeout = 90 * time.Second
 
 	// 安全限制
 	maxResponseSize  = 10 * 1024 * 1024 // 最大响应体 10MB
@@ -39,11 +39,11 @@ var allowedMethods = map[string]bool{
 
 // httpClient 自定义 HTTP 客户端，带超时和连接池配置
 var httpClient = &http.Client{
-	Timeout: defaultTimeout,
+	Timeout: httpClientTimeout,
 	Transport: &http.Transport{
-		MaxIdleConns:        defaultMaxIdleConns,
-		MaxIdleConnsPerHost: defaultMaxConnsPerHost,
-		IdleConnTimeout:     defaultIdleConnTimeout,
+		MaxIdleConns:        httpClientMaxIdleConns,
+		MaxIdleConnsPerHost: httpClientMaxConnsPerHost,
+		IdleConnTimeout:     httpClientIdleConnTimeout,
 	},
 	CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		if len(via) >= maxRedirectCount {

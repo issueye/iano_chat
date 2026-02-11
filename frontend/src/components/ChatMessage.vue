@@ -49,9 +49,9 @@
           ]"
         >
           <!-- Content -->
-          <div class="text-sm leading-relaxed whitespace-pre-wrap">
+          <div class="text-sm leading-relaxed">
             <template v-if="messageContent.text">
-              {{ messageContent.text }}
+              <MarkdownRenderer :content="messageContent.text" />
             </template>
             <template v-else-if="message.status === 'streaming'">
               <span class="inline-flex items-center gap-1">
@@ -163,6 +163,7 @@ import {
   AlertCircle,
   Wrench,
 } from "lucide-vue-next";
+import MarkdownRenderer from "./MarkdownRenderer.vue";
 
 const props = defineProps({
   message: {

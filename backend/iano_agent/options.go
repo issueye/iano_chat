@@ -1,4 +1,4 @@
-package agent
+package iano_agent
 
 type Option func(*Config)
 

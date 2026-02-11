@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/cloudwego/eino/components/tool"
@@ -148,6 +149,32 @@ func GetBuiltinTools(ctx context.Context) (map[string]tool.BaseTool, error) {
 	httpTool := &HTTPClientTool{}
 	toolsMap["http_request"] = httpTool
 
+	basePath, _ := os.Getwd()
+	toolsMap["file_read"] = NewFileReadTool(basePath)
+	toolsMap["file_write"] = NewFileWriteTool(basePath)
+	toolsMap["file_list"] = NewFileListTool(basePath)
+	toolsMap["file_delete"] = NewFileDeleteTool(basePath)
+	toolsMap["file_info"] = NewFileInfoTool(basePath)
+
+	toolsMap["grep_search"] = NewGrepSearchTool(basePath)
+	toolsMap["grep_replace"] = NewGrepReplaceTool(basePath)
+
+	toolsMap["archive_create"] = NewArchiveCreateTool(basePath)
+	toolsMap["archive_extract"] = NewArchiveExtractTool(basePath)
+
+	cmdTool := NewCommandExecuteTool()
+	toolsMap["command_execute"] = cmdTool
+	toolsMap["shell_execute"] = NewShellExecuteTool()
+	toolsMap["process_list"] = NewProcessListTool()
+
+	toolsMap["env_get"] = NewEnvironmentGetTool()
+	toolsMap["env_set"] = NewEnvironmentSetTool()
+	toolsMap["system_info"] = NewSystemInfoTool()
+
+	toolsMap["ping"] = NewPingTool()
+	toolsMap["dns_lookup"] = NewDNSLookupTool()
+	toolsMap["http_headers"] = NewHTTPHeadersTool()
+
 	return toolsMap, nil
 }
 
@@ -163,6 +190,68 @@ func RegisterBuiltinTools(ctx context.Context) error {
 	httpTool := &HTTPClientTool{}
 	if err := GlobalRegistry.Register("http_request", httpTool); err != nil {
 		return fmt.Errorf("注册 HTTP 工具失败: %w", err)
+	}
+
+	basePath, _ := os.Getwd()
+	if err := GlobalRegistry.Register("file_read", NewFileReadTool(basePath)); err != nil {
+		return fmt.Errorf("注册文件读取工具失败: %w", err)
+	}
+	if err := GlobalRegistry.Register("file_write", NewFileWriteTool(basePath)); err != nil {
+		return fmt.Errorf("注册文件写入工具失败: %w", err)
+	}
+	if err := GlobalRegistry.Register("file_list", NewFileListTool(basePath)); err != nil {
+		return fmt.Errorf("注册文件列表工具失败: %w", err)
+	}
+	if err := GlobalRegistry.Register("file_delete", NewFileDeleteTool(basePath)); err != nil {
+		return fmt.Errorf("注册文件删除工具失败: %w", err)
+	}
+	if err := GlobalRegistry.Register("file_info", NewFileInfoTool(basePath)); err != nil {
+		return fmt.Errorf("注册文件信息工具失败: %w", err)
+	}
+
+	if err := GlobalRegistry.Register("grep_search", NewGrepSearchTool(basePath)); err != nil {
+		return fmt.Errorf("注册搜索工具失败: %w", err)
+	}
+	if err := GlobalRegistry.Register("grep_replace", NewGrepReplaceTool(basePath)); err != nil {
+		return fmt.Errorf("注册替换工具失败: %w", err)
+	}
+
+	if err := GlobalRegistry.Register("archive_create", NewArchiveCreateTool(basePath)); err != nil {
+		return fmt.Errorf("注册压缩工具失败: %w", err)
+	}
+	if err := GlobalRegistry.Register("archive_extract", NewArchiveExtractTool(basePath)); err != nil {
+		return fmt.Errorf("注册解压工具失败: %w", err)
+	}
+
+	cmdTool := NewCommandExecuteTool()
+	if err := GlobalRegistry.Register("command_execute", cmdTool); err != nil {
+		return fmt.Errorf("注册命令执行工具失败: %w", err)
+	}
+	if err := GlobalRegistry.Register("shell_execute", NewShellExecuteTool()); err != nil {
+		return fmt.Errorf("注册 Shell 执行工具失败: %w", err)
+	}
+	if err := GlobalRegistry.Register("process_list", NewProcessListTool()); err != nil {
+		return fmt.Errorf("注册进程列表工具失败: %w", err)
+	}
+
+	if err := GlobalRegistry.Register("env_get", NewEnvironmentGetTool()); err != nil {
+		return fmt.Errorf("注册环境变量获取工具失败: %w", err)
+	}
+	if err := GlobalRegistry.Register("env_set", NewEnvironmentSetTool()); err != nil {
+		return fmt.Errorf("注册环境变量设置工具失败: %w", err)
+	}
+	if err := GlobalRegistry.Register("system_info", NewSystemInfoTool()); err != nil {
+		return fmt.Errorf("注册系统信息工具失败: %w", err)
+	}
+
+	if err := GlobalRegistry.Register("ping", NewPingTool()); err != nil {
+		return fmt.Errorf("注册 Ping 工具失败: %w", err)
+	}
+	if err := GlobalRegistry.Register("dns_lookup", NewDNSLookupTool()); err != nil {
+		return fmt.Errorf("注册 DNS 查询工具失败: %w", err)
+	}
+	if err := GlobalRegistry.Register("http_headers", NewHTTPHeadersTool()); err != nil {
+		return fmt.Errorf("注册 HTTP 头工具失败: %w", err)
 	}
 
 	return nil

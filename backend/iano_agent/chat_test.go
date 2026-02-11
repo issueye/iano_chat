@@ -1,4 +1,4 @@
-package agent
+package iano_agent
 
 import (
 	"context"
@@ -92,10 +92,10 @@ func TestSummaryConfig(t *testing.T) {
 // TestEstimateTokens 测试Token估算
 func TestEstimateTokens(t *testing.T) {
 	tests := []struct {
-		name         string
-		input        string
-		minExpected  int // 最小期望值（新算法范围）
-		maxExpected  int // 最大期望值
+		name        string
+		input       string
+		minExpected int // 最小期望值（新算法范围）
+		maxExpected int // 最大期望值
 	}{
 		{
 			name:        "纯英文",
@@ -106,7 +106,7 @@ func TestEstimateTokens(t *testing.T) {
 		{
 			name:        "纯中文",
 			input:       "你好世界",
-			minExpected: 8,   // 新算法：4个中文字符 * 2 = 8 + 开销
+			minExpected: 8, // 新算法：4个中文字符 * 2 = 8 + 开销
 			maxExpected: 15,
 		},
 		{

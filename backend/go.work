@@ -1,8 +1,8 @@
 go 1.24.11
 
 use (
-    ./iano_server
-    ./iano_agent
-    ./iano_web
-    ./iano_script_engine
+	./iano_agent
+	./iano_script_engine
+	./iano_server
+	./iano_web
 )
