@@ -33,6 +33,7 @@ type CreateAgentConfig struct {
 	SystemPrompt string
 	AllowedTools []string
 	MaxRounds    int
+	Model        model.ToolCallingChatModel
 }
 
 func (m *Manager) CreateAgent(ctx context.Context, cfg *CreateAgentConfig) (*AgentInstance, error) {
@@ -42,6 +43,11 @@ func (m *Manager) CreateAgent(ctx context.Context, cfg *CreateAgentConfig) (*Age
 
 	if _, exists := m.instances.Load(cfg.ID); exists {
 		return nil, fmt.Errorf("agent with id %s already exists", cfg.ID)
+	}
+
+	chatModel := m.chatModel
+	if cfg.Model != nil {
+		chatModel = cfg.Model
 	}
 
 	opts := []Option{
@@ -57,7 +63,7 @@ func (m *Manager) CreateAgent(ctx context.Context, cfg *CreateAgentConfig) (*Age
 		opts = append(opts, WithMaxRounds(cfg.MaxRounds))
 	}
 
-	agent, err := NewAgent(m.chatModel, opts...)
+	agent, err := NewAgent(chatModel, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create agent: %w", err)
 	}

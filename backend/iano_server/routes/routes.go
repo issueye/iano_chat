@@ -25,7 +25,6 @@ func SetupRoutes(db *gorm.DB) *web.Engine {
 	sessionService := services.NewSessionService(db)
 	toolService := services.NewToolService(db)
 	providerService := services.NewProviderService(db)
-	chatService := services.NewChatService(db, nil, nil, nil)
 
 	agentManagerService := services.NewAgentManagerService(
 		db,
@@ -43,7 +42,7 @@ func SetupRoutes(db *gorm.DB) *web.Engine {
 	sessionController := controllers.NewSessionController(sessionService)
 	toolController := controllers.NewToolController(toolService, agentManagerService)
 	providerController := controllers.NewProviderController(providerService)
-	chatController := controllers.NewChatController(chatService, agentService, providerService)
+	chatController := controllers.NewChatController(agentService, providerService, agentManagerService, messageService)
 	baseController := &controllers.BaseController{}
 
 	engine.GET("/health", func(c *web.Context) {

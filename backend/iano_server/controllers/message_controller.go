@@ -5,7 +5,6 @@ import (
 	"iano_server/services"
 	web "iano_web"
 	"net/http"
-	"strconv"
 )
 
 type MessageController struct {
@@ -175,15 +174,9 @@ func (c *MessageController) Delete(ctx *web.Context) {
 }
 
 func (c *MessageController) DeleteBySessionID(ctx *web.Context) {
-	sessionIDStr := ctx.Query("session_id")
-	if sessionIDStr == "" {
+	sessionID := ctx.Query("session_id")
+	if sessionID == "" {
 		ctx.JSON(http.StatusBadRequest, models.Fail("session_id is required"))
-		return
-	}
-
-	sessionID, err := strconv.ParseInt(sessionIDStr, 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Fail("invalid session_id"))
 		return
 	}
 

@@ -1,24 +1,36 @@
 package controllers
 
 import (
+	"context"
+	"fmt"
 	iano "iano_agent"
 	"iano_server/models"
 	"iano_server/services"
 	web "iano_web"
 	"net/http"
+
+	"github.com/cloudwego/eino-ext/components/model/openai"
+	"github.com/cloudwego/eino/schema"
 )
 
 type ChatController struct {
-	chatService     *services.ChatService
-	agentService    *services.AgentService
-	providerService *services.ProviderService
+	agentService        *services.AgentService
+	providerService     *services.ProviderService
+	agentManagerService *services.AgentManagerService
+	messageService      *services.MessageService
 }
 
-func NewChatController(chatService *services.ChatService, agentService *services.AgentService, providerService *services.ProviderService) *ChatController {
+func NewChatController(
+	agentService *services.AgentService,
+	providerService *services.ProviderService,
+	agentManagerService *services.AgentManagerService,
+	messageService *services.MessageService,
+) *ChatController {
 	return &ChatController{
-		chatService:     chatService,
-		agentService:    agentService,
-		providerService: providerService,
+		agentService:        agentService,
+		providerService:     providerService,
+		agentManagerService: agentManagerService,
+		messageService:      messageService,
 	}
 }
 
@@ -42,6 +54,63 @@ type StreamChatRequest struct {
 	Message   string `json:"message" validate:"required"`
 }
 
+func (c *ChatController) getOrCreateAgent(ctx context.Context, agentID string) error {
+	_, err := c.agentManagerService.GetAgentInfo(agentID)
+	if err == nil {
+		return nil
+	}
+
+	providers, err := c.providerService.GetAll()
+	if err != nil || len(providers) == 0 {
+		return fmt.Errorf("请先创建 Provider（AI 提供商配置）")
+	}
+
+	provider := providers[0]
+	agent := &models.Agent{
+		Name:         "Default Agent",
+		Description:  "默认智能助手",
+		Type:         models.AgentTypeMain,
+		ProviderID:   provider.ID,
+		Model:        provider.Model,
+		Instructions: "你是一个智能助手，请用中文回答用户的问题。",
+	}
+	agent.ID = agentID
+	if err := c.agentService.Create(agent); err != nil {
+		return fmt.Errorf("创建默认 Agent 失败: %v", err)
+	}
+
+	return c.agentManagerService.ReloadAgent(ctx, agentID)
+}
+
+func (c *ChatController) chatWithProvider(ctx context.Context, message string) (string, error) {
+	providers, err := c.providerService.GetAll()
+	if err != nil || len(providers) == 0 {
+		return "", fmt.Errorf("请先创建 Provider（AI 提供商配置）")
+	}
+
+	provider := providers[0]
+	chatModel, err := openai.NewChatModel(ctx, &openai.ChatModelConfig{
+		BaseURL: provider.BaseUrl,
+		APIKey:  provider.ApiKey,
+		Model:   provider.Model,
+	})
+	if err != nil {
+		return "", fmt.Errorf("创建 ChatModel 失败: %v", err)
+	}
+
+	messages := []*schema.Message{
+		schema.SystemMessage("你是一个智能助手，请用中文回答用户的问题。"),
+		schema.UserMessage(message),
+	}
+
+	resp, err := chatModel.Generate(ctx, messages)
+	if err != nil {
+		return "", fmt.Errorf("调用 AI 失败: %v", err)
+	}
+
+	return resp.Content, nil
+}
+
 func (c *ChatController) Chat(ctx *web.Context) {
 	var req ChatRequest
 	if err := ctx.BindAndValidate(&req); err != nil {
@@ -54,52 +123,52 @@ func (c *ChatController) Chat(ctx *web.Context) {
 		agentID = "default"
 	}
 
-	agent, err := c.agentService.GetByID(agentID)
-	if err != nil {
-		agent = &models.Agent{
-			Name:         "Default Agent",
-			Instructions: "你是一个智能助手。",
-		}
-	}
-
-	chatReq := &services.ChatRequest{
-		SessionID: req.SessionID,
-		AgentID:   agentID,
-		Message:   req.Message,
-		Agent:     agent,
-	}
-
-	resp, err := c.chatService.Chat(ctx.Request.Context(), chatReq, nil)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
-		return
-	}
-
 	userMsg := &models.Message{
 		SessionID: req.SessionID,
 		Type:      models.MessageTypeUser,
-		Content:   req.Message,
 		Status:    models.MessageStatusCompleted,
 	}
 	userMsg.NewID()
-	c.chatService.SaveMessage(userMsg)
+	if err := userMsg.SetText(req.Message); err != nil {
+		userMsg.Content = req.Message
+	}
+	c.messageService.Create(userMsg)
+
+	var response string
+	var err error
+
+	response, err = c.agentManagerService.Chat(ctx.Request.Context(), agentID, req.Message, nil)
+	if err != nil {
+		if cerr := c.getOrCreateAgent(ctx.Request.Context(), agentID); cerr != nil {
+			response, err = c.chatWithProvider(ctx.Request.Context(), req.Message)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
+				return
+			}
+		} else {
+			response, err = c.agentManagerService.Chat(ctx.Request.Context(), agentID, req.Message, nil)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
+				return
+			}
+		}
+	}
 
 	assistantMsg := &models.Message{
-		SessionID:   req.SessionID,
-		Type:        models.MessageTypeAssistant,
-		Content:     resp.Content,
-		Status:      models.MessageStatusCompleted,
-		InputTokens: int(resp.TokenUsage.PromptTokens),
+		SessionID: req.SessionID,
+		Type:      models.MessageTypeAssistant,
+		Status:    models.MessageStatusCompleted,
 	}
 	assistantMsg.NewID()
-	c.chatService.SaveMessage(assistantMsg)
+	if err := assistantMsg.SetText(response); err != nil {
+		assistantMsg.Content = response
+	}
+	c.messageService.Create(assistantMsg)
 
 	ctx.JSON(http.StatusOK, models.Success(ChatResponse{
-		Content:    resp.Content,
-		TokenUsage: resp.TokenUsage.TotalTokens,
-		Duration:   resp.Duration.Milliseconds(),
-		SessionID:  req.SessionID,
-		AgentID:    agentID,
+		Content:   response,
+		SessionID: req.SessionID,
+		AgentID:   agentID,
 	}))
 }
 
@@ -121,22 +190,40 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 		agentID = "default"
 	}
 
+	userMsg := &models.Message{
+		SessionID: req.SessionID,
+		Type:      models.MessageTypeUser,
+		Status:    models.MessageStatusCompleted,
+	}
+	userMsg.NewID()
+	if err := userMsg.SetText(req.Message); err != nil {
+		userMsg.Content = req.Message
+	}
+	c.messageService.Create(userMsg)
+
+	var accumulatedContent string
 	callback := func(content string, isToolCall bool) {
+		accumulatedContent += content
 		sse.EmitEvent("message", map[string]interface{}{
 			"content":      content,
 			"is_tool_call": isToolCall,
 		})
 	}
 
-	chatReq := &services.ChatRequest{
-		SessionID: req.SessionID,
-		AgentID:   agentID,
-		Message:   req.Message,
-	}
-
-	_, err = c.chatService.Chat(ctx.Request.Context(), chatReq, iano.MessageCallback(callback))
+	_, err = c.agentManagerService.Chat(ctx.Request.Context(), agentID, req.Message, iano.MessageCallback(callback))
 	if err != nil {
 		sse.EmitEvent("error", map[string]string{"error": err.Error()})
+	} else {
+		assistantMsg := &models.Message{
+			SessionID: req.SessionID,
+			Type:      models.MessageTypeAssistant,
+			Status:    models.MessageStatusCompleted,
+		}
+		assistantMsg.NewID()
+		if err := assistantMsg.SetText(accumulatedContent); err != nil {
+			assistantMsg.Content = accumulatedContent
+		}
+		c.messageService.Create(assistantMsg)
 	}
 
 	sse.EmitEvent("done", map[string]string{"status": "completed"})
@@ -150,7 +237,8 @@ func (c *ChatController) ClearSession(ctx *web.Context) {
 		return
 	}
 
-	if err := c.chatService.ClearSession(ctx.Request.Context(), sessionID); err != nil {
+	err := c.messageService.DeleteBySessionID(sessionID)
+	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
 		return
 	}
@@ -171,9 +259,12 @@ func (c *ChatController) GetConversationInfo(ctx *web.Context) {
 		agentID = "default"
 	}
 
-	info, err := c.chatService.GetConversationInfo(sessionID, agentID)
+	info, err := c.agentManagerService.GetAgentInfo(agentID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
+		ctx.JSON(http.StatusOK, models.Success(map[string]interface{}{
+			"sessionId": sessionID,
+			"agentId":   agentID,
+		}))
 		return
 	}
 
@@ -181,6 +272,6 @@ func (c *ChatController) GetConversationInfo(ctx *web.Context) {
 }
 
 func (c *ChatController) GetPoolStats(ctx *web.Context) {
-	stats := c.chatService.GetPoolStats()
+	stats := c.agentManagerService.GetManagerStats()
 	ctx.JSON(http.StatusOK, models.Success(stats))
 }

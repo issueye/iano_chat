@@ -39,6 +39,9 @@ func NewAgentManagerService(
 }
 
 func (s *AgentManagerService) Initialize(ctx context.Context) error {
+	s.manager = iano.NewManager(nil)
+	slog.Info("Agent manager created")
+
 	agents, err := s.agentService.GetAll()
 	if err != nil {
 		return fmt.Errorf("failed to load agents: %w", err)
@@ -60,10 +63,6 @@ func (s *AgentManagerService) loadAgent(ctx context.Context, agent *models.Agent
 		return fmt.Errorf("failed to get chat model: %w", err)
 	}
 
-	if s.manager == nil {
-		s.manager = iano.NewManager(chatModel)
-	}
-
 	allowedTools := s.parseTools(agent.Tools)
 
 	cfg := &iano.CreateAgentConfig{
@@ -72,6 +71,7 @@ func (s *AgentManagerService) loadAgent(ctx context.Context, agent *models.Agent
 		SystemPrompt: agent.Instructions,
 		AllowedTools: allowedTools,
 		MaxRounds:    50,
+		Model:        chatModel,
 	}
 
 	_, err = s.manager.CreateAgent(ctx, cfg)
@@ -83,15 +83,32 @@ func (s *AgentManagerService) loadAgent(ctx context.Context, agent *models.Agent
 }
 
 func (s *AgentManagerService) getOrCreateChatModel(ctx context.Context, providerID string) (model.ToolCallingChatModel, error) {
-	if m, exists := s.modelCache[providerID]; exists {
+	if providerID != "" {
+		if m, exists := s.modelCache[providerID]; exists {
+			return m, nil
+		}
+
+		provider, err := s.providerService.GetByID(providerID)
+		if err != nil {
+			return nil, fmt.Errorf("provider not found: %w", err)
+		}
+
+		return s.createChatModelFromProvider(ctx, provider)
+	}
+
+	defaultProvider, err := s.providerService.GetDefault()
+	if err != nil {
+		return nil, fmt.Errorf("no default provider configured, please set a provider as default")
+	}
+
+	if m, exists := s.modelCache[defaultProvider.ID]; exists {
 		return m, nil
 	}
 
-	provider, err := s.providerService.GetByID(providerID)
-	if err != nil {
-		return nil, fmt.Errorf("provider not found: %w", err)
-	}
+	return s.createChatModelFromProvider(ctx, defaultProvider)
+}
 
+func (s *AgentManagerService) createChatModelFromProvider(ctx context.Context, provider *models.Provider) (model.ToolCallingChatModel, error) {
 	chatModel, err := openai.NewChatModel(ctx, &openai.ChatModelConfig{
 		BaseURL:     provider.BaseUrl,
 		APIKey:      provider.ApiKey,
@@ -103,7 +120,7 @@ func (s *AgentManagerService) getOrCreateChatModel(ctx context.Context, provider
 		return nil, fmt.Errorf("failed to create chat model: %w", err)
 	}
 
-	s.modelCache[providerID] = chatModel
+	s.modelCache[provider.ID] = chatModel
 	return chatModel, nil
 }
 
@@ -167,6 +184,24 @@ func (s *AgentManagerService) DeleteAgent(agentID string) error {
 func (s *AgentManagerService) Chat(ctx context.Context, agentID string, message string, callback iano.MessageCallback) (string, error) {
 	if s.manager == nil {
 		return "", fmt.Errorf("agent manager not initialized")
+	}
+
+	if _, exists := s.manager.GetAgent(agentID); !exists {
+		chatModel, err := s.getOrCreateChatModel(ctx, "")
+		if err != nil {
+			return "", fmt.Errorf("failed to get chat model for agent %s: %w", agentID, err)
+		}
+
+		cfg := &iano.CreateAgentConfig{
+			ID:        agentID,
+			Name:      agentID,
+			MaxRounds: 50,
+			Model:     chatModel,
+		}
+
+		if _, err := s.manager.CreateAgent(ctx, cfg); err != nil {
+			return "", fmt.Errorf("failed to create temporary agent: %w", err)
+		}
 	}
 
 	return s.manager.Chat(ctx, agentID, message, callback)

@@ -149,28 +149,6 @@ export const useChatStore = defineStore('chat', () => {
     setLoading(true)
     clearError()
 
-    try {
-      const response = await fetch(`${API_BASE}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: String(currentSessionId.value),
-          type: 'user',
-          content: JSON.stringify({ text: content }),
-          status: 'completed'
-        })
-      })
-      const data = await response.json()
-      if (data.code === 200 && data.data) {
-        const idx = messages.value.findIndex(m => m.id === userMessage.id)
-        if (idx !== -1) {
-          messages.value[idx] = { ...messages.value[idx], ...data.data }
-        }
-      }
-    } catch (err) {
-      setError(err.message)
-    }
-
     const assistantMessageId = Date.now().toString() + '_assistant'
     const assistantMessage = {
       id: assistantMessageId,
@@ -233,22 +211,6 @@ export const useChatStore = defineStore('chat', () => {
       }
 
       updateMessage(assistantMessageId, { status: 'completed' })
-
-      // Save the assistant message to the backend
-      try {
-        await fetch(`${API_BASE}/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            session_id: String(currentSessionId.value),
-            type: 'assistant',
-            content: JSON.stringify({ text: accumulatedContent }),
-            status: 'completed'
-          })
-        })
-      } catch (e) {
-        // Silent fail for saving
-      }
 
     } catch (err) {
       setError(err.message)

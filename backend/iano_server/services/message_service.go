@@ -72,7 +72,7 @@ func (s *MessageService) Delete(id string) error {
 	return nil
 }
 
-func (s *MessageService) DeleteBySessionID(sessionID int64) error {
+func (s *MessageService) DeleteBySessionID(sessionID string) error {
 	result := s.db.Where("session_id = ?", sessionID).Delete(&models.Message{})
 	return result.Error
 }
@@ -85,7 +85,7 @@ func (s *MessageService) Count() (int64, error) {
 	return count, nil
 }
 
-func (s *MessageService) CountBySessionID(sessionID int64) (int64, error) {
+func (s *MessageService) CountBySessionID(sessionID string) (int64, error) {
 	var count int64
 	if err := s.db.Model(&models.Message{}).Where("session_id = ?", sessionID).Count(&count).Error; err != nil {
 		return 0, err

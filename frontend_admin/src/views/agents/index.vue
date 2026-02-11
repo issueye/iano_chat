@@ -84,13 +84,7 @@
           <template #model="{ value }">
             <span class="text-sm text-muted-foreground">{{ value || "-" }}</span>
           </template>
-          
-          <template #is_sub_agent="{ value }">
-            <Badge :variant="value ? 'secondary' : 'outline'">
-              {{ value ? "是" : "否" }}
-            </Badge>
-          </template>
-          
+ 
           <template #created_at="{ value }">
             <span class="text-muted-foreground text-sm">{{ formatDatetime(value) }}</span>
           </template>
@@ -161,8 +155,7 @@ const columns = [
   { key: "name", title: "名称" },
   { key: "type", title: "类型", width: "100px", align: "center" },
   { key: "model", title: "模型", width: "150px" },
-  { key: "is_sub_agent", title: "子Agent", width: "80px", align: "center" },
-  { key: "created_at", title: "创建时间", width: "180px" },
+  { key: "created_at", slot: "created_at", title: "创建时间", width: "180px" },
   { title: "操作", slot: "actions", width: "120px", fixed: "right", align: "center" },
 ]
 
