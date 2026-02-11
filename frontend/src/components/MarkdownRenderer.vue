@@ -1,10 +1,9 @@
 <template>
-  <MarkdownRenderer :source="content" />
+  <XMarkdown :markdown="content" />
 </template>
 
 <script setup>
-import { MarkdownRenderer } from 'element-plus-x';
-import 'element-plus-x/es/style.css';
+import { XMarkdown } from 'vue-element-plus-x';
 
 const props = defineProps({
   content: {
