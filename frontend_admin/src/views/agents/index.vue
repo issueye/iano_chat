@@ -100,7 +100,7 @@
           
           <!-- 操作列 -->
           <template #actions="{ row }">
-            <div class="flex items-center gap-1">
+            <div class="flex items-center justify-center gap-1">
               <Tooltip content="编辑">
                 <Button variant="ghost" size="icon-sm" @click="handleEdit(row)">
                   <Pencil class="h-4 w-4" />
@@ -156,12 +156,12 @@ import { Plus, Pencil, Trash2, Bot, CheckCircle2, XCircle } from "lucide-vue-nex
 
 // 表格列配置
 const columns = [
-  { key: "name", title: "名称", width: "250px" },
+  { key: "name", title: "名称" },
   { key: "type", title: "类型", width: "100px", align: "center" },
   { key: "model", title: "模型", width: "150px" },
-  { key: "tools", title: "Tools", width: "100px", align: "center" },
+  { key: "tools", title: "Tools", align: "center" },
   { key: "status", title: "状态", width: "100px", align: "center" },
-  { title: "操作", slot: "actions", width: "100px", align: "center" },
+  { title: "操作", slot: "actions", width: "100px", fixed: "right", align: "center" },
 ];
 
 // 数据状态

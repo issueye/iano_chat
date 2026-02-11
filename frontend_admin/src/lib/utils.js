@@ -10,19 +10,13 @@ export function cn(...inputs) {
   return twMerge(clsx(inputs))
 }
 
-export const formatTime = (isoString) => {
-  if (!isoString) return "";
-  const date = new Date(isoString);
-  const now = new Date();
-  const diff = now - date;
-
-  if (diff < 60000) {
-    return "刚刚";
-  } else if (diff < 3600000) {
-    return `${Math.floor(diff / 60000)} 分钟前`;
-  } else if (diff < 86400000) {
-    return `${Math.floor(diff / 3600000)} 小时前`;
-  } else {
-    return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
-  }
-};
+/**
+ * 格式化日期
+ * @param {string} dateStr - 日期字符串
+ * @returns {string} 格式化后的日期
+ */
+export const formatDatetime = (dateStr) => {
+  if (!dateStr) return "-";
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("zh-CN") + " " + date.toLocaleTimeString("zh-CN");
+}

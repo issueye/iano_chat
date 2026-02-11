@@ -110,7 +110,7 @@
           
           <!-- 操作列 -->
           <template #actions="{ row }">
-            <div class="flex items-center gap-1">
+            <div class="flex items-center justify-center gap-1">
               <Tooltip content="编辑">
                 <Button variant="ghost" size="icon-sm" @click="handleEdit(row)">
                   <Pencil class="h-4 w-4" />
@@ -166,11 +166,11 @@ import { Plus, Pencil, Trash2, Wrench, CheckCircle2, XCircle, Tag } from "lucide
 
 // 表格列配置
 const columns = [
-  { key: "name", title: "名称", width: "220px" },
+  { key: "name", title: "名称" },
   { key: "type", title: "类型", width: "100px", align: "center" },
-  { key: "category", title: "分类", width: "120px" },
-  { key: "version", title: "版本", width: "80px", align: "center" },
-  { key: "author", title: "作者", width: "120px" },
+  { key: "category", title: "分类" },
+  { key: "version", title: "版本", width: "160px", align: "center" },
+  { key: "author", title: "作者", width: "160px" },
   { key: "status", title: "状态", width: "100px", align: "center" },
   { title: "操作", slot: "actions", width: "100px", align: "center" },
 ];

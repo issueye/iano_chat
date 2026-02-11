@@ -2,7 +2,7 @@
   <div class="space-y-6">
     <!-- 页面标题 -->
     <div class="flex items-center justify-between">
-      <div>
+      <div class="flex items-center gap-2">
         <h2 class="text-2xl font-bold tracking-tight">供应商管理</h2>
         <p class="text-muted-foreground">
           管理 API 提供商配置，包括添加、编辑、删除供应商信息
@@ -90,7 +90,7 @@
           
           <!-- 创建时间列 -->
           <template #created_at="{ value }">
-            <span class="text-muted-foreground text-sm">{{ formatDate(value) }}</span>
+            <span class="text-muted-foreground text-sm">{{ formatDatetime(value) }}</span>
           </template>
           
           <!-- 操作列 -->
@@ -148,13 +148,13 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import ProviderFormDialog from "./components/ProviderFormDialog.vue";
 import { Plus, Pencil, Trash2, Building2, CheckCircle2, XCircle } from "lucide-vue-next";
+import { formatDatetime } from "@/lib/utils";
 
 // 表格列配置
 const columns = [
   { key: "name", title: "名称", width: "200px" },
-  { key: "api_base", title: "API Base URL" },
-  { key: "models_count", title: "模型数量", width: "100px", align: "center" },
-  { key: "status", title: "状态", width: "100px", align: "center" },
+  { key: "base_url", title: "API Base URL" },
+  { key: "model", title: "模型名称", width: "100px", align: "center" },
   { key: "created_at", title: "创建时间", width: "180px", slot: "created_at" },
   { title: "操作", slot: "actions", width: "100px", align: "center" },
 ];
@@ -177,17 +177,6 @@ const stats = computed(() => {
     inactive: total - active
   };
 });
-
-/**
- * 格式化日期
- * @param {string} dateStr - 日期字符串
- * @returns {string} 格式化后的日期
- */
-function formatDate(dateStr) {
-  if (!dateStr) return "-";
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("zh-CN") + " " + date.toLocaleTimeString("zh-CN");
-}
 
 /**
  * 获取供应商列表数据

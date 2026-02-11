@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Tooltip } from '@/components/ui/tooltip'
 
 /**
  * 数据表格组件
@@ -24,7 +25,7 @@ const props = defineProps({
     type: Array,
     required: true,
     // 格式: [
-    //   { key: 'name', title: '名称', width: '200px', align: 'left' },
+    //   { key: 'name', title: '名称', width: '200px', align: 'left', ellipsis: true, tooltip: true },
     //   { key: 'status', title: '状态', slot: 'status' },
     //   { title: '操作', slot: 'actions', width: '120px' }
     // ]
@@ -80,20 +81,69 @@ function getCellValue(item, column) {
   }
   return value
 }
+
+/**
+ * 获取列宽类名
+ * @param {string} width - 宽度值
+ * @returns {string} Tailwind 类名
+ */
+function getWidthClass(width) {
+  // 如果是百分比宽度，转换为 flex-basis 样式
+  if (typeof width === 'string' && width.includes('%')) {
+    return ''
+  }
+  // 如果是固定像素宽度，使用内联样式，不添加类名
+  return ''
+}
+
+/**
+ * 获取列样式
+ * @param {Object} column - 列配置
+ * @returns {Object} 样式对象
+ */
+function getColumnStyle(column) {
+  if (!column.width) return {}
+  return { width: column.width, 'min-width': column.width }
+}
+
+/**
+ * 获取省略类名
+ * @param {Object} column - 列配置
+ * @returns {string} 类名
+ */
+function getEllipsisClass(column) {
+  if (column.ellipsis !== false) {
+    // 默认启用省略，除非显式设置为 false
+    return 'truncate'
+  }
+  return ''
+}
+
+/**
+ * 是否需要显示 tooltip
+ * @param {Object} column - 列配置
+ * @returns {boolean}
+ */
+function needTooltip(column) {
+  // 如果显式设置了 tooltip: true，或者设置了 ellipsis: true 但没有显式关闭 tooltip
+  return column.tooltip === true || (column.ellipsis !== false && column.tooltip !== false)
+}
 </script>
 
 <template>
   <div class="rounded-md border">
-    <Table>
+    <Table class="w-full table-fixed">
       <TableHeader>
         <TableRow>
           <TableHead
             v-for="column in columns"
             :key="column.key || column.slot"
-            :class="getAlignClass(column)"
-            :style="column.width ? { width: column.width } : {}"
+            :class="[getAlignClass(column), column.width ? getWidthClass(column.width) : '']"
+            :style="getColumnStyle(column)"
           >
-            {{ column.title }}
+            <div :class="['truncate', getEllipsisClass(column)]">
+              {{ column.title }}
+            </div>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -113,7 +163,8 @@ function getCellValue(item, column) {
             <TableCell
               v-for="column in columns"
               :key="column.key || column.slot"
-              :class="getAlignClass(column)"
+              :class="[getAlignClass(column), column.width ? getWidthClass(column.width) : '']"
+              :style="getColumnStyle(column)"
             >
               <!-- 使用插槽 -->
               <slot
@@ -123,11 +174,25 @@ function getCellValue(item, column) {
                 :value="getCellValue(item, column)"
                 :column="column"
               >
-                {{ getCellValue(item, column) }}
+                <Tooltip v-if="needTooltip(column)" :content="String(getCellValue(item, column) || '')">
+                  <div :class="['truncate', getEllipsisClass(column)]">
+                    {{ getCellValue(item, column) }}
+                  </div>
+                </Tooltip>
+                <div v-else :class="['truncate', getEllipsisClass(column)]">
+                  {{ getCellValue(item, column) }}
+                </div>
               </slot>
               <!-- 默认显示 -->
               <template v-else>
-                {{ getCellValue(item, column) }}
+                <Tooltip v-if="needTooltip(column)" :content="String(getCellValue(item, column) || '')">
+                  <div :class="['truncate', getEllipsisClass(column)]">
+                    {{ getCellValue(item, column) }}
+                  </div>
+                </Tooltip>
+                <div v-else :class="['truncate', getEllipsisClass(column)]">
+                  {{ getCellValue(item, column) }}
+                </div>
               </template>
             </TableCell>
           </TableRow>
