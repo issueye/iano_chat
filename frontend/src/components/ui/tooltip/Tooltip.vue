@@ -1,22 +1,35 @@
-<template>
-    <TooltipTrigger>
-        <slot />
-        <TooltipContent :placement="placement">{{ content }}<slot name="content" /></TooltipContent>
-    </TooltipTrigger>
-</template>
-
 <script setup>
-import { computed } from 'vue';
-import { TooltipTrigger, TooltipContent } from '.';
+import { TooltipArrow, TooltipContent, TooltipPortal, TooltipProvider, TooltipRoot, TooltipTrigger } from 'reka-ui'
 
 const props = defineProps({
-    content: {
-        type: String,
-        default: '',
-    },
-    placement: {
-        type: String,
-        default: 'top',
-    },
-});
+  content: {
+    type: String,
+    default: ''
+  }
+})
 </script>
+
+<template>
+  <TooltipProvider>
+    <TooltipRoot>
+      <TooltipTrigger
+        class="text-grass11 hover:bg-stone-50 inline-flex h-[35px] w-[35px] items-center justify-center rounded-full bg-white shadow-sm border outline-none focus:shadow-[0_0_0_2px] focus:shadow-black"
+      >
+        <slot></slot>
+      </TooltipTrigger>
+      <TooltipPortal>
+        <TooltipContent
+          class="data-[state=delayed-open]:data-[side=top]:animate-slideDownAndFade data-[state=delayed-open]:data-[side=right]:animate-slideLeftAndFade data-[state=delayed-open]:data-[side=left]:animate-slideRightAndFade data-[state=delayed-open]:data-[side=bottom]:animate-slideUpAndFade text-grass11 select-none rounded-md bg-white px-[15px] py-[10px] text-sm leading-none shadow-sm border will-change-[transform,opacity]"
+          :side-offset="5"
+        >
+          {{ content }}
+          <TooltipArrow
+            class="fill-white stroke-gray-200"
+            :width="12"
+            :height="6"
+          />
+        </TooltipContent>
+      </TooltipPortal>
+    </TooltipRoot>
+  </TooltipProvider>
+</template>

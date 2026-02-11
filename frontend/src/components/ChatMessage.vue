@@ -2,19 +2,22 @@
   <div
     :class="[
       'flex w-full animate-fade-in mb-6 last:mb-0',
-      message.type === 'user' ? 'justify-end' : 'justify-start'
+      message.type === 'user' ? 'justify-end' : 'justify-start',
     ]"
   >
     <div
       :class="[
         'group flex gap-3 sm:gap-4 max-w-[90%] sm:max-w-[80%] lg:max-w-[75%]',
-        message.type === 'user' ? 'flex-row-reverse' : 'flex-row'
+        message.type === 'user' ? 'flex-row-reverse' : 'flex-row',
       ]"
     >
       <!-- Avatar -->
       <Avatar :class="message.type === 'user' ? 'bg-primary' : 'bg-secondary'">
         <AvatarFallback>
-          <User v-if="message.type === 'user'" class="w-4 h-4 text-primary-foreground" />
+          <User
+            v-if="message.type === 'user'"
+            class="w-4 h-4 text-primary-foreground"
+          />
           <Bot v-else class="w-4 h-4 text-foreground" />
         </AvatarFallback>
       </Avatar>
@@ -25,11 +28,11 @@
         <div
           :class="[
             'flex items-center gap-2 text-xs',
-            message.type === 'user' ? 'justify-end' : 'justify-start'
+            message.type === 'user' ? 'justify-end' : 'justify-start',
           ]"
         >
           <span class="font-medium text-foreground">
-            {{ message.type === 'user' ? '我' : 'AI 助手' }}
+            {{ message.type === "user" ? "我" : "AI 助手" }}
           </span>
           <span class="text-muted-foreground">
             {{ formatTime(message.created_at) }}
@@ -42,7 +45,7 @@
             'relative px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl',
             message.type === 'user'
               ? 'bg-primary text-primary-foreground rounded-tr-sm'
-              : 'bg-secondary text-foreground rounded-tl-sm'
+              : 'bg-secondary text-foreground rounded-tl-sm',
           ]"
         >
           <!-- Content -->
@@ -52,9 +55,18 @@
             </template>
             <template v-else-if="message.status === 'streaming'">
               <span class="inline-flex items-center gap-1">
-                <span class="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style="animation-delay: 0s"></span>
-                <span class="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
-                <span class="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style="animation-delay: 0.4s"></span>
+                <span
+                  class="w-1.5 h-1.5 bg-current rounded-full animate-bounce"
+                  style="animation-delay: 0s"
+                ></span>
+                <span
+                  class="w-1.5 h-1.5 bg-current rounded-full animate-bounce"
+                  style="animation-delay: 0.2s"
+                ></span>
+                <span
+                  class="w-1.5 h-1.5 bg-current rounded-full animate-bounce"
+                  style="animation-delay: 0.4s"
+                ></span>
               </span>
             </template>
             <template v-else-if="message.status === 'failed'">
@@ -76,7 +88,9 @@
                 <Wrench class="w-4 h-4 text-foreground" />
                 {{ tool.function.name }}
               </div>
-              <div class="mt-2 opacity-70 font-mono text-[10px] bg-black/5 rounded p-2 truncate">
+              <div
+                class="mt-2 opacity-70 font-mono text-[10px] bg-black/5 rounded p-2 truncate"
+              >
                 {{ tool.function.arguments }}
               </div>
             </div>
@@ -84,54 +98,50 @@
 
           <!-- Reasoning -->
           <div v-if="messageContent.reasoning_content" class="mt-3">
-            <div class="text-xs opacity-70 italic border-l-2 border-current pl-3 py-1">
+            <div
+              class="text-xs opacity-70 italic border-l-2 border-current pl-3 py-1"
+            >
               {{ messageContent.reasoning_content }}
             </div>
           </div>
 
           <!-- Actions -->
           <div
-            v-if="message.type === 'assistant' && message.status === 'completed'"
+            v-if="
+              message.type === 'assistant' && message.status === 'completed'
+            "
             class="absolute -bottom-8 left-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
           >
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button variant="ghost" size="icon" class="h-7 w-7 hover:bg-muted" @click="copyMessage">
-                    <Copy class="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>复制</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Tooltip content="复制">
+              <Button
+                variant="ghost"
+                size="icon"
+                class="h-7 w-7 hover:bg-muted"
+                @click="copyMessage"
+              >
+                <Copy class="h-3.5 w-3.5" />
+              </Button>
+            </Tooltip>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button variant="ghost" size="icon" class="h-7 w-7 hover:bg-muted">
-                    <ThumbsUp class="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>点赞</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Tooltip content="点赞">
+              <Button
+                variant="ghost"
+                size="icon"
+                class="h-7 w-7 hover:bg-muted"
+              >
+                <ThumbsUp class="h-3.5 w-3.5" />
+              </Button>
+            </Tooltip>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button variant="ghost" size="icon" class="h-7 w-7 hover:bg-muted">
-                    <ThumbsDown class="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>点踩</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Tooltip content="点踩">
+              <Button
+                variant="ghost"
+                size="icon"
+                class="h-7 w-7 hover:bg-muted"
+              >
+                <ThumbsDown class="h-3.5 w-3.5" />
+              </Button>
+            </Tooltip>
           </div>
         </div>
       </div>
@@ -140,10 +150,10 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { computed } from "vue";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 import {
   User,
   Bot,
@@ -151,40 +161,40 @@ import {
   ThumbsUp,
   ThumbsDown,
   AlertCircle,
-  Wrench
-} from 'lucide-vue-next'
+  Wrench,
+} from "lucide-vue-next";
 
 const props = defineProps({
   message: {
     type: Object,
-    required: true
+    required: true,
   },
   isLast: {
     type: Boolean,
-    default: false
-  }
-})
+    default: false,
+  },
+});
 
 const messageContent = computed(() => {
   try {
-    return JSON.parse(props.message.content) || {}
+    return JSON.parse(props.message.content) || {};
   } catch {
-    return { text: props.message.content }
+    return { text: props.message.content };
   }
-})
+});
 
 function formatTime(isoString) {
-  if (!isoString) return ''
-  const date = new Date(isoString)
-  return date.toLocaleTimeString('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+  if (!isoString) return "";
+  const date = new Date(isoString);
+  return date.toLocaleTimeString("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function copyMessage() {
-  const text = messageContent.value.text || ''
-  navigator.clipboard.writeText(text)
+  const text = messageContent.value.text || "";
+  navigator.clipboard.writeText(text);
 }
 </script>
 
