@@ -141,9 +141,7 @@ func (t *CommandExecuteTool) InvokableRun(ctx context.Context, argumentsInJSON s
 func (t *CommandExecuteTool) isCommandAllowed(command string) bool {
 	if runtime.GOOS == "windows" {
 		command = strings.ToLower(command)
-		if strings.HasSuffix(command, ".exe") {
-			command = command[:len(command)-4]
-		}
+		command = strings.TrimSuffix(command, ".exe")
 	}
 
 	_, allowed := t.allowedCommands[command]
