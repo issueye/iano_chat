@@ -4,4 +4,5 @@ use (
     ./iano_server
     ./iano_agent
     ./iano_web
+    ./iano_script_engine
 )

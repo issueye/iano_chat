@@ -10,6 +10,7 @@ const (
 	ToolTypeCustom   ToolType = "custom"   // 自定义工具
 	ToolTypeExternal ToolType = "external" // 外部工具（API 调用）
 	ToolTypePlugin   ToolType = "plugin"   // 插件工具
+	ToolTypeScript   ToolType = "script"   // 脚本工具（JavaScript）
 )
 
 // ToolStatus 工具状态

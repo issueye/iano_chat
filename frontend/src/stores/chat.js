@@ -6,7 +6,9 @@ const API_BASE = '/api'
 export const useChatStore = defineStore('chat', () => {
   const messages = ref([])
   const sessions = ref([])
+  const agents = ref([])
   const currentSessionId = ref(null)
+  const currentAgentId = ref('default')
   const isLoading = ref(false)
   const error = ref(null)
   const abortController = ref(null)
@@ -19,8 +21,20 @@ export const useChatStore = defineStore('chat', () => {
     return sessions.value.find(s => String(s.id) === String(currentSessionId.value))
   })
 
+  const mainAgents = computed(() => {
+    return agents.value.filter(a => a.type === 'main')
+  })
+
+  const currentAgent = computed(() => {
+    return agents.value.find(a => a.id === currentAgentId.value)
+  })
+
   function setCurrentSession(sessionId) {
     currentSessionId.value = sessionId
+  }
+
+  function setCurrentAgent(agentId) {
+    currentAgentId.value = agentId
   }
 
   function addMessage(message) {
@@ -69,6 +83,21 @@ export const useChatStore = defineStore('chat', () => {
       const data = await response.json()
       if (data.code === 200) {
         sessions.value = data.data || []
+      }
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function fetchAgents() {
+    try {
+      const response = await fetch(`${API_BASE}/agents/type?type=main`)
+      const data = await response.json()
+      if (data.code === 200) {
+        agents.value = data.data || []
+        if (agents.value.length > 0 && currentAgentId.value === 'default') {
+          currentAgentId.value = agents.value[0].id
+        }
       }
     } catch (err) {
       setError(err.message)
@@ -165,6 +194,7 @@ export const useChatStore = defineStore('chat', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: String(currentSessionId.value),
+          agent_id: currentAgentId.value,
           message: content
         })
       })
@@ -243,6 +273,7 @@ export const useChatStore = defineStore('chat', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: String(currentSessionId.value),
+          agent_id: currentAgentId.value,
           message: content
         })
       })
@@ -269,12 +300,17 @@ export const useChatStore = defineStore('chat', () => {
   return {
     messages,
     sessions,
+    agents,
     currentSessionId,
+    currentAgentId,
     isLoading,
     error,
     currentMessages,
     currentSession,
+    mainAgents,
+    currentAgent,
     setCurrentSession,
+    setCurrentAgent,
     addMessage,
     updateMessage,
     setLoading,
@@ -283,6 +319,7 @@ export const useChatStore = defineStore('chat', () => {
     clearCurrentSession,
     cancelStreaming,
     fetchSessions,
+    fetchAgents,
     createSession,
     switchSession,
     deleteSession,

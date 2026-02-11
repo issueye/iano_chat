@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	iano "iano_agent"
+	script_engine "iano_script_engine"
 	"iano_server/models"
 
 	"github.com/cloudwego/eino-ext/components/model/openai"
@@ -329,6 +330,8 @@ func (s *AgentManagerService) createToolHandler(tool *models.Tool) iano.DynamicT
 			return s.handleCustomTool(ctx, tool, params)
 		case models.ToolTypeExternal:
 			return s.handleExternalTool(ctx, tool, params)
+		case models.ToolTypeScript:
+			return s.handleScriptTool(ctx, tool, params)
 		default:
 			return fmt.Sprintf("Tool %s executed with params: %v", tool.Name, params), nil
 		}
@@ -345,6 +348,11 @@ func (s *AgentManagerService) handleCustomTool(ctx context.Context, tool *models
 
 func (s *AgentManagerService) handleExternalTool(ctx context.Context, tool *models.Tool, params map[string]interface{}) (string, error) {
 	return fmt.Sprintf("External tool %s called", tool.Name), nil
+}
+
+func (s *AgentManagerService) handleScriptTool(ctx context.Context, tool *models.Tool, params map[string]interface{}) (string, error) {
+	engine := script_engine.NewEngine(nil)
+	return engine.ExecuteWithStringResult(ctx, tool.Config, params)
 }
 
 func (s *AgentManagerService) ListAgentInstances() []*iano.AgentInstance {

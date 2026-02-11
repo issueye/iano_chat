@@ -173,6 +173,8 @@
                 <div class="w-full mx-auto p-2 sm:px-0">
                     <ChatInput
                         :is-loading="chatStore.isLoading"
+                        :agents="chatStore.mainAgents"
+                        v-model="chatStore.currentAgentId"
                         @send="handleSendMessage"
                     />
                 </div>
@@ -217,8 +219,9 @@ const quickActions = [
 ];
 
 onMounted(() => {
-    chatStore.fetchSessions();
-});
+    chatStore.fetchSessions()
+    chatStore.fetchAgents()
+})
 
 async function handleCreateSession() {
     await chatStore.createSession();

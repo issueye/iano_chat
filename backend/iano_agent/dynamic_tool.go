@@ -7,6 +7,7 @@ import (
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
+	script_engine "iano_script_engine"
 )
 
 type DynamicTool struct {
@@ -137,15 +138,21 @@ type ScriptToolConfig struct {
 	Parameters []ToolParamDef
 	Script     string
 	Language   string
+	Engine     *script_engine.Engine
 }
 
 func NewScriptTool(cfg *ScriptToolConfig) *DynamicTool {
+	engine := cfg.Engine
+	if engine == nil {
+		engine = script_engine.NewEngine(nil)
+	}
+
 	return NewDynamicTool(&DynamicToolConfig{
 		Name:       cfg.Name,
 		Desc:       cfg.Desc,
 		Parameters: cfg.Parameters,
 		Handler: func(ctx context.Context, params map[string]interface{}) (string, error) {
-			return fmt.Sprintf("Executed %s script: %s", cfg.Language, cfg.Script), nil
+			return engine.ExecuteWithStringResult(ctx, cfg.Script, params)
 		},
 	})
 }
