@@ -132,15 +132,6 @@
                     <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
                     <span class="text-xs text-muted-foreground">系统正常</span>
                 </div>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    class="h-8 w-8 hover:bg-muted"
-                    title="设置"
-                    @click="emit('open-settings')"
-                >
-                    <Settings class="w-4 h-4 text-muted-foreground" />
-                </Button>
             </div>
         </div>
     </div>
@@ -171,7 +162,7 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(["select", "create", "delete", "open-settings"]);
+const emit = defineEmits(["select", "create", "delete"]);
 
 function formatTime(isoString) {
     if (!isoString) return "";

@@ -15,7 +15,6 @@
                 @select="handleSessionSelect"
                 @create="handleCreateSession"
                 @delete="handleDeleteSession"
-                @open-settings="isSettingsOpen = true"
             />
         </aside>
 
@@ -179,12 +178,6 @@
                 </div>
             </div>
         </main>
-
-        <!-- Settings Dialog -->
-        <SettingsDialog
-            :open="isSettingsOpen"
-            @update:open="(val) => { console.log('ChatContainer update:open', val); isSettingsOpen = val; }"
-        />
     </div>
 </template>
 
@@ -194,13 +187,11 @@ import { useChatStore } from "@/stores/chat";
 import SessionList from "./SessionList.vue";
 import ChatMessage from "./ChatMessage.vue";
 import ChatInput from "./ChatInput.vue";
-import SettingsDialog from "./SettingsDialog.vue";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     Menu,
     Trash2,
-    Settings,
     Sparkles,
     Loader2,
     AlertCircle,
