@@ -1,0 +1,291 @@
+package services
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+
+	iano "iano_agent"
+	"iano_server/models"
+
+	"github.com/cloudwego/eino-ext/components/model/openai"
+	"github.com/cloudwego/eino/components/model"
+	"gorm.io/gorm"
+)
+
+type AgentManagerService struct {
+	db              *gorm.DB
+	agentService    *AgentService
+	providerService *ProviderService
+	toolService     *ToolService
+	manager         *iano.Manager
+	modelCache      map[string]model.ToolCallingChatModel
+}
+
+func NewAgentManagerService(
+	db *gorm.DB,
+	agentService *AgentService,
+	providerService *ProviderService,
+	toolService *ToolService,
+) *AgentManagerService {
+	return &AgentManagerService{
+		db:              db,
+		agentService:    agentService,
+		providerService: providerService,
+		toolService:     toolService,
+		modelCache:      make(map[string]model.ToolCallingChatModel),
+	}
+}
+
+func (s *AgentManagerService) Initialize(ctx context.Context) error {
+	agents, err := s.agentService.GetAll()
+	if err != nil {
+		return fmt.Errorf("failed to load agents: %w", err)
+	}
+
+	for _, agent := range agents {
+		if err := s.loadAgent(ctx, &agent); err != nil {
+			slog.Error("Failed to load agent", "id", agent.ID, "error", err)
+		}
+	}
+
+	slog.Info("Agent manager initialized", "count", len(agents))
+	return nil
+}
+
+func (s *AgentManagerService) loadAgent(ctx context.Context, agent *models.Agent) error {
+	chatModel, err := s.getOrCreateChatModel(ctx, agent.ProviderID)
+	if err != nil {
+		return fmt.Errorf("failed to get chat model: %w", err)
+	}
+
+	if s.manager == nil {
+		s.manager = iano.NewManager(chatModel)
+	}
+
+	allowedTools := s.parseTools(agent.Tools)
+
+	cfg := &iano.CreateAgentConfig{
+		ID:           agent.ID,
+		Name:         agent.Name,
+		SystemPrompt: agent.Instructions,
+		AllowedTools: allowedTools,
+		MaxRounds:    50,
+	}
+
+	_, err = s.manager.CreateAgent(ctx, cfg)
+	if err != nil {
+		return fmt.Errorf("failed to create agent instance: %w", err)
+	}
+
+	return nil
+}
+
+func (s *AgentManagerService) getOrCreateChatModel(ctx context.Context, providerID string) (model.ToolCallingChatModel, error) {
+	if m, exists := s.modelCache[providerID]; exists {
+		return m, nil
+	}
+
+	provider, err := s.providerService.GetByID(providerID)
+	if err != nil {
+		return nil, fmt.Errorf("provider not found: %w", err)
+	}
+
+	chatModel, err := openai.NewChatModel(ctx, &openai.ChatModelConfig{
+		BaseURL:     provider.BaseUrl,
+		APIKey:      provider.ApiKey,
+		Model:       provider.Model,
+		Temperature: &provider.Temperature,
+		MaxTokens:   &provider.MaxTokens,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create chat model: %w", err)
+	}
+
+	s.modelCache[providerID] = chatModel
+	return chatModel, nil
+}
+
+func (s *AgentManagerService) parseTools(toolsStr string) []string {
+	if toolsStr == "" {
+		return nil
+	}
+
+	var tools []string
+	if err := json.Unmarshal([]byte(toolsStr), &tools); err != nil {
+		return []string{toolsStr}
+	}
+	return tools
+}
+
+func (s *AgentManagerService) CreateAgent(ctx context.Context, req *CreateAgentRequest) (*models.Agent, error) {
+	agent := &models.Agent{
+		Name:         req.Name,
+		Description:  req.Description,
+		Type:         models.AgentType(req.Type),
+		IsSubAgent:   req.IsSubAgent,
+		ProviderID:   req.ProviderID,
+		Model:        req.Model,
+		Instructions: req.Instructions,
+		Tools:        req.Tools,
+	}
+	agent.NewID()
+
+	if err := s.agentService.Create(agent); err != nil {
+		return nil, fmt.Errorf("failed to create agent in database: %w", err)
+	}
+
+	if err := s.loadAgent(ctx, agent); err != nil {
+		slog.Error("Failed to load agent instance", "id", agent.ID, "error", err)
+	}
+
+	return agent, nil
+}
+
+type CreateAgentRequest struct {
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	Type         string `json:"type"`
+	IsSubAgent   bool   `json:"is_sub_agent"`
+	ProviderID   string `json:"provider_id"`
+	Model        string `json:"model"`
+	Instructions string `json:"instructions"`
+	Tools        string `json:"tools"`
+}
+
+func (s *AgentManagerService) DeleteAgent(agentID string) error {
+	if s.manager != nil {
+		if err := s.manager.DeleteAgent(agentID); err != nil {
+			slog.Warn("Failed to delete agent instance", "id", agentID, "error", err)
+		}
+	}
+
+	return s.agentService.Delete(agentID)
+}
+
+func (s *AgentManagerService) Chat(ctx context.Context, agentID string, message string, callback iano.MessageCallback) (string, error) {
+	if s.manager == nil {
+		return "", fmt.Errorf("agent manager not initialized")
+	}
+
+	return s.manager.Chat(ctx, agentID, message, callback)
+}
+
+func (s *AgentManagerService) GetAgentInfo(agentID string) (map[string]interface{}, error) {
+	if s.manager == nil {
+		return nil, fmt.Errorf("agent manager not initialized")
+	}
+
+	return s.manager.GetAgentInfo(agentID)
+}
+
+func (s *AgentManagerService) AddToolToAgent(ctx context.Context, agentID string, toolID string) error {
+	if s.manager == nil {
+		return fmt.Errorf("agent manager not initialized")
+	}
+
+	tool, err := s.toolService.GetByID(toolID)
+	if err != nil {
+		return fmt.Errorf("tool not found: %w", err)
+	}
+
+	dynamicTool, err := s.createDynamicTool(tool)
+	if err != nil {
+		return fmt.Errorf("failed to create dynamic tool: %w", err)
+	}
+
+	return s.manager.AddToolToAgent(ctx, agentID, tool.Name, dynamicTool)
+}
+
+func (s *AgentManagerService) RemoveToolFromAgent(agentID string, toolName string) error {
+	if s.manager == nil {
+		return fmt.Errorf("agent manager not initialized")
+	}
+
+	return s.manager.RemoveToolFromAgent(agentID, toolName)
+}
+
+func (s *AgentManagerService) createDynamicTool(tool *models.Tool) (*iano.DynamicTool, error) {
+	params, err := iano.ToolParamsFromJSON(tool.Parameters)
+	if err != nil {
+		params = nil
+	}
+
+	cfg := &iano.DynamicToolConfig{
+		Name:       tool.Name,
+		Desc:       tool.Desc,
+		Parameters: params,
+		Handler:    s.createToolHandler(tool),
+	}
+
+	return iano.NewDynamicTool(cfg), nil
+}
+
+func (s *AgentManagerService) createToolHandler(tool *models.Tool) iano.DynamicToolHandler {
+	return func(ctx context.Context, params map[string]interface{}) (string, error) {
+		s.toolService.IncrementCallCount(tool.ID)
+
+		switch tool.Type {
+		case models.ToolTypeBuiltin:
+			return s.handleBuiltinTool(ctx, tool, params)
+		case models.ToolTypeCustom:
+			return s.handleCustomTool(ctx, tool, params)
+		case models.ToolTypeExternal:
+			return s.handleExternalTool(ctx, tool, params)
+		default:
+			return fmt.Sprintf("Tool %s executed with params: %v", tool.Name, params), nil
+		}
+	}
+}
+
+func (s *AgentManagerService) handleBuiltinTool(ctx context.Context, tool *models.Tool, params map[string]interface{}) (string, error) {
+	return fmt.Sprintf("Builtin tool %s executed", tool.Name), nil
+}
+
+func (s *AgentManagerService) handleCustomTool(ctx context.Context, tool *models.Tool, params map[string]interface{}) (string, error) {
+	return fmt.Sprintf("Custom tool %s executed with params: %v", tool.Name, params), nil
+}
+
+func (s *AgentManagerService) handleExternalTool(ctx context.Context, tool *models.Tool, params map[string]interface{}) (string, error) {
+	return fmt.Sprintf("External tool %s called", tool.Name), nil
+}
+
+func (s *AgentManagerService) ListAgentInstances() []*iano.AgentInstance {
+	if s.manager == nil {
+		return nil
+	}
+	return s.manager.ListAgents()
+}
+
+func (s *AgentManagerService) GetManagerStats() map[string]interface{} {
+	if s.manager == nil {
+		return map[string]interface{}{
+			"initialized": false,
+		}
+	}
+	return map[string]interface{}{
+		"initialized":   true,
+		"agentCount":    s.manager.Count(),
+		"modelCacheLen": len(s.modelCache),
+	}
+}
+
+func (s *AgentManagerService) ReloadAgent(ctx context.Context, agentID string) error {
+	agent, err := s.agentService.GetByID(agentID)
+	if err != nil {
+		return fmt.Errorf("agent not found: %w", err)
+	}
+
+	if s.manager != nil {
+		s.manager.DeleteAgent(agentID)
+	}
+
+	return s.loadAgent(ctx, agent)
+}
+
+func (s *AgentManagerService) ClearAllAgents() {
+	if s.manager != nil {
+		s.manager.Clear()
+	}
+}

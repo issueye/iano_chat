@@ -8,11 +8,15 @@ import (
 )
 
 type ToolController struct {
-	toolService *services.ToolService
+	toolService         *services.ToolService
+	agentManagerService *services.AgentManagerService
 }
 
-func NewToolController(toolService *services.ToolService) *ToolController {
-	return &ToolController{toolService: toolService}
+func NewToolController(toolService *services.ToolService, agentManagerService *services.AgentManagerService) *ToolController {
+	return &ToolController{
+		toolService:         toolService,
+		agentManagerService: agentManagerService,
+	}
 }
 
 type CreateToolRequest struct {
@@ -189,4 +193,38 @@ func (c *ToolController) Delete(ctx *web.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, models.Success(map[string]string{"message": "Tool deleted successfully"}))
+}
+
+func (c *ToolController) RegisterToAgent(ctx *web.Context) {
+	toolID := ctx.Param("id")
+	agentID := ctx.Query("agent_id")
+	if agentID == "" {
+		ctx.JSON(http.StatusBadRequest, models.Fail("agent_id is required"))
+		return
+	}
+
+	if err := c.agentManagerService.AddToolToAgent(ctx.Request.Context(), agentID, toolID); err != nil {
+		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, models.Success(map[string]string{
+		"message":  "Tool registered to agent successfully",
+		"tool_id":  toolID,
+		"agent_id": agentID,
+	}))
+}
+
+func (c *ToolController) Test(ctx *web.Context) {
+	id := ctx.Param("id")
+	tool, err := c.toolService.GetByID(id)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, models.Fail("Tool not found"))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, models.Success(map[string]interface{}{
+		"tool":    tool,
+		"message": "Tool definition loaded successfully",
+	}))
 }
