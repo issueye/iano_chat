@@ -14,64 +14,60 @@ import (
 	"github.com/cloudwego/eino/schema"
 )
 
-// Config Agent 配置
 type Config struct {
-	Tools     []Tool
-	Callback  MessageCallback
-	Summary   SummaryConfig
-	MaxRounds int // 最大对话轮数限制
+	Tools        []Tool
+	Callback     MessageCallback
+	Summary      SummaryConfig
+	MaxRounds    int
+	AllowedTools []string
+	SessionID    string
+	AgentID      string
+	SystemPrompt string
 }
 
-// DefaultConfig 返回默认配置
 func DefaultConfig() *Config {
 	return &Config{
 		Tools: make([]Tool, 0),
 		Summary: SummaryConfig{
-			KeepRecentRounds: 4,   // 默认保留最近4轮
-			TriggerThreshold: 8,   // 达到8轮触发摘要
-			MaxSummaryTokens: 500, // 摘要最多500 tokens
+			KeepRecentRounds: 4,
+			TriggerThreshold: 8,
+			MaxSummaryTokens: 500,
 			Enabled:          true,
 		},
-		MaxRounds: 50, // 默认最大50轮对话
+		MaxRounds:    50,
+		SystemPrompt: "你是一个智能助手。",
 	}
 }
 
-// ConversationLayer 对话分层存储
 type ConversationLayer struct {
-	// 完整对话历史（最近N轮）
-	RecentRounds []*ConversationRound
-	// 历史摘要内容
-	SummaryContent string
-	// 已摘要的对话轮数
+	RecentRounds     []*ConversationRound
+	SummaryContent   string
 	SummarizedRounds int
 }
 
-// Agent AI Agent 封装
 type Agent struct {
-	config           *Config
-	ra               *react.Agent
-	chatModel        model.ToolCallingChatModel
-	conversation     *ConversationLayer
-	mu               sync.RWMutex
-	tokenUsage       *TokenUsage
-	OutputTokenUsage int
-	// 最大对话轮数
-	maxRounds int
+	config       *Config
+	ra           *react.Agent
+	chatModel    model.ToolCallingChatModel
+	conversation *ConversationLayer
+	mu           sync.RWMutex
+	tokenUsage   *TokenUsage
+	maxRounds    int
+	toolRegistry tools.Registry
+	createdAt    time.Time
+	lastActiveAt time.Time
 }
 
-// NewAgent 创建新的 Agent 实例
 func NewAgent(chatModel model.ToolCallingChatModel, opts ...Option) (*Agent, error) {
-	// 使用默认配置
 	cfg := DefaultConfig()
 
-	// 应用配置选项
 	for _, opt := range opts {
 		opt(cfg)
 	}
 
 	agent := &Agent{
 		config:    cfg,
-		maxRounds: cfg.MaxRounds, // 初始化 maxRounds
+		maxRounds: cfg.MaxRounds,
 		conversation: &ConversationLayer{
 			RecentRounds:     make([]*ConversationRound, 0),
 			SummaryContent:   "",
@@ -80,15 +76,17 @@ func NewAgent(chatModel model.ToolCallingChatModel, opts ...Option) (*Agent, err
 		tokenUsage: &TokenUsage{
 			LastUpdated: time.Now(),
 		},
+		createdAt:    time.Now(),
+		lastActiveAt: time.Now(),
 	}
 
-	// 创建 Tools
+	agent.toolRegistry = tools.NewScopedRegistry(tools.GlobalRegistry, cfg.AllowedTools)
+
 	toolsConfig, err := agent.makeToolsConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to make tools config: %w", err)
 	}
 
-	// 创建 react agent
 	ctx := context.Background()
 	ra, err := react.NewAgent(ctx, &react.AgentConfig{
 		ToolCallingModel: chatModel,
@@ -105,26 +103,22 @@ func NewAgent(chatModel model.ToolCallingChatModel, opts ...Option) (*Agent, err
 	return agent, nil
 }
 
-// messageModifier 消息修改器，组装上下文
 func (a *Agent) messageModifier(ctx context.Context, input []*schema.Message) []*schema.Message {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
 	result := make([]*schema.Message, 0)
 
-	// 1. 添加系统提示（如果有摘要，加入摘要信息）
 	systemPrompt := a.buildSystemPrompt()
 	if systemPrompt != "" {
 		result = append(result, schema.SystemMessage(systemPrompt))
 	}
 
-	// 2. 添加历史摘要（如果有）
 	if a.conversation.SummaryContent != "" {
 		summaryMsg := fmt.Sprintf("[历史对话摘要] %s", a.conversation.SummaryContent)
 		result = append(result, schema.UserMessage(summaryMsg))
 	}
 
-	// 3. 添加最近的完整对话
 	for _, round := range a.conversation.RecentRounds {
 		if round.UserMessage != nil {
 			result = append(result, round.UserMessage)
@@ -134,17 +128,19 @@ func (a *Agent) messageModifier(ctx context.Context, input []*schema.Message) []
 		}
 	}
 
-	// 4. 添加当前输入
 	result = append(result, input...)
 
 	return result
 }
 
-// buildSystemPrompt 构建系统提示
 func (a *Agent) buildSystemPrompt() string {
 	var parts []string
 
-	parts = append(parts, "你是一个智能助手。")
+	if a.config.SystemPrompt != "" {
+		parts = append(parts, a.config.SystemPrompt)
+	} else {
+		parts = append(parts, "你是一个智能助手。")
+	}
 
 	if a.conversation.SummaryContent != "" {
 		parts = append(parts, "以下是之前对话的摘要，供你参考上下文。")
@@ -153,18 +149,15 @@ func (a *Agent) buildSystemPrompt() string {
 	return strings.Join(parts, "")
 }
 
-// makeToolsConfig 创建工具配置
 func (a *Agent) makeToolsConfig() (compose.ToolsNodeConfig, error) {
-	// 从全局注册表获取所有工具
-	bts := tools.GlobalRegistry.List()
+	bts := a.toolRegistry.List()
 
-	// 如果没有注册任何工具，注册内置工具
 	if len(bts) == 0 {
 		ctx := context.Background()
 		if err := tools.RegisterBuiltinTools(ctx); err != nil {
 			return compose.ToolsNodeConfig{}, fmt.Errorf("注册内置工具失败: %w", err)
 		}
-		bts = tools.GlobalRegistry.List()
+		bts = a.toolRegistry.List()
 	}
 
 	return compose.ToolsNodeConfig{
@@ -172,7 +165,6 @@ func (a *Agent) makeToolsConfig() (compose.ToolsNodeConfig, error) {
 	}, nil
 }
 
-// ClearHistory 清空对话历史
 func (a *Agent) ClearHistory() {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -187,20 +179,17 @@ func (a *Agent) ClearHistory() {
 	}
 }
 
-// GetHistory 获取对话历史（包含摘要信息）
 func (a *Agent) GetHistory() []*schema.Message {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
 	result := make([]*schema.Message, 0)
 
-	// 添加摘要标记
 	if a.conversation.SummaryContent != "" {
 		summaryInfo := fmt.Sprintf("[历史摘要: 已摘要%d轮对话]", a.conversation.SummarizedRounds)
 		result = append(result, schema.SystemMessage(summaryInfo))
 	}
 
-	// 添加完整对话
 	for _, round := range a.conversation.RecentRounds {
 		if round.UserMessage != nil {
 			result = append(result, round.UserMessage)
@@ -211,4 +200,44 @@ func (a *Agent) GetHistory() []*schema.Message {
 	}
 
 	return result
+}
+
+func (a *Agent) GetToolRegistry() tools.Registry {
+	return a.toolRegistry
+}
+
+func (a *Agent) GetSessionID() string {
+	return a.config.SessionID
+}
+
+func (a *Agent) GetAgentID() string {
+	return a.config.AgentID
+}
+
+func (a *Agent) GetCreatedAt() time.Time {
+	return a.createdAt
+}
+
+func (a *Agent) GetLastActiveAt() time.Time {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.lastActiveAt
+}
+
+func (a *Agent) updateLastActive() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.lastActiveAt = time.Now()
+}
+
+func (a *Agent) RestoreConversation(layer *ConversationLayer) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.conversation = layer
+}
+
+func (a *Agent) GetConversationLayer() *ConversationLayer {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.conversation
 }
