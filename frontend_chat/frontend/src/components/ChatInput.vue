@@ -70,29 +70,19 @@
 
           <div class="h-4 w-px bg-border"></div>
 
-          <div>
-            <input
-              ref="directoryInput"
-              type="file"
-              webkitdirectory
-              directory
-              class="hidden"
-              @change="handleDirectorySelect"
+          <div
+            class="flex items-center min-w-[140px] h-[34px] gap-1.5 px-2 py-1.5 rounded-lg bg-muted/50 border border-border/50 cursor-pointer hover:bg-muted transition-colors"
+            @click="selectDirectory"
+          >
+            <FolderOpen class="h-4 w-4 text-muted-foreground shrink-0" />
+            <span class="text-xs text-muted-foreground whitespace-nowrap">
+              {{ selectedDirectory || '选择目录' }}
+            </span>
+            <X
+              v-if="selectedDirectory"
+              class="h-3 w-3 text-muted-foreground hover:text-foreground shrink-0"
+              @click.stop="clearDirectory"
             />
-            <div
-              class="flex items-center min-w-[140px] h-[34px] gap-1.5 px-2 py-1.5 rounded-lg bg-muted/50 border border-border/50 cursor-pointer hover:bg-muted transition-colors"
-              @click="selectDirectory"
-            >
-              <FolderOpen class="h-4 w-4 text-muted-foreground shrink-0" />
-              <span class="text-xs text-muted-foreground whitespace-nowrap">
-                {{ selectedDirectory || '选择目录' }}
-              </span>
-              <X
-                v-if="selectedDirectory"
-                class="h-3 w-3 text-muted-foreground hover:text-foreground shrink-0"
-                @click.stop="clearDirectory"
-              />
-            </div>
           </div>
         </div>
 
@@ -122,6 +112,15 @@ import { Tooltip } from "@/components/ui/tooltip"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { Paperclip, Send, Loader2, FolderOpen, X } from "lucide-vue-next"
 
+// Wails Go binding
+const selectDirectoryFromWails = async () => {
+  if (window.go && window.go.main && window.go.main.App && window.go.main.App.SelectDirectory) {
+    return await window.go.main.App.SelectDirectory()
+  }
+  // Fallback for browser mode
+  return null
+}
+
 const props = defineProps({
   isLoading: {
     type: Boolean,
@@ -141,7 +140,6 @@ const emit = defineEmits(["send", "update:modelValue", "select-directory"])
 
 const inputText = ref("")
 const textareaRef = ref(null)
-const directoryInput = ref(null)
 const selectedDirectory = ref("")
 
 const currentAgent = computed(() => {
@@ -180,28 +178,19 @@ function sendMessage() {
   }
 }
 
-function selectDirectory() {
-  if (directoryInput.value) {
-    directoryInput.value.click()
-  }
-}
-
-function handleDirectorySelect(event) {
-  const files = event.target.files
-  if (files && files.length > 0) {
-    const file = files[0]
-    // 获取目录完整绝对路径
-    const fullPath = file.path ? file.path.substring(0, file.path.lastIndexOf(file.name) - 1) : file.webkitRelativePath
-    selectedDirectory.value = fullPath
-    // 立即将绝对路径传给后端
-    emit("select-directory", fullPath)
+async function selectDirectory() {
+  try {
+    const path = await selectDirectoryFromWails()
+    if (path) {
+      selectedDirectory.value = path
+      emit("select-directory", path)
+    }
+  } catch (error) {
+    console.error("选择目录失败:", error)
   }
 }
 
 function clearDirectory() {
   selectedDirectory.value = ""
-  if (directoryInput.value) {
-    directoryInput.value.value = ""
-  }
 }
 </script>

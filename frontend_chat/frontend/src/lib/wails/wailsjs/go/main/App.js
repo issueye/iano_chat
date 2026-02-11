@@ -22,6 +22,10 @@ export function Minimize() {
   return window['go']['main']['App']['Minimize']();
 }
 
+export function SelectDirectory() {
+  return window['go']['main']['App']['SelectDirectory']();
+}
+
 export function Unmaximize() {
   return window['go']['main']['App']['Unmaximize']();
 }

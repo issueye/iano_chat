@@ -52,3 +52,12 @@ func (a *App) Unmaximize() {
 func (a *App) Close() {
 	runtime.Quit(a.ctx)
 }
+
+// SelectDirectory opens a directory dialog and returns the selected path
+func (a *App) SelectDirectory() (string, error) {
+	options := runtime.OpenDialogOptions{
+		Title:                "选择目录",
+		CanCreateDirectories: false,
+	}
+	return runtime.OpenDirectoryDialog(a.ctx, options)
+}

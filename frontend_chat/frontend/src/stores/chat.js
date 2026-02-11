@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
-const API_BASE = '/api'
+const API_BASE = 'http://127.0.0.1:8080/api'
 
 export const useChatStore = defineStore('chat', () => {
   const messages = ref([])

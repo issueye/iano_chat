@@ -11,4 +11,6 @@ export function Maximize():Promise<void>;
 
 export function Minimize():Promise<void>;
 
+export function SelectDirectory():Promise<string>;
+
 export function Unmaximize():Promise<void>;
