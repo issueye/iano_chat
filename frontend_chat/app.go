@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"runtime"
+	rt "runtime"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -30,7 +30,7 @@ func (a *App) Greet(name string) string {
 
 // GetOS returns the current operating system
 func (a *App) GetOS() string {
-	return runtime.GOOS
+	return rt.GOOS
 }
 
 // Minimize minimizes the window
