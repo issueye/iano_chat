@@ -42,6 +42,8 @@ func (s *AgentManagerService) Initialize(ctx context.Context) error {
 	s.manager = iano.NewManager(nil)
 	slog.Info("Agent manager created")
 
+	s.ensureDefaultAgents(ctx)
+
 	agents, err := s.agentService.GetAll()
 	if err != nil {
 		return fmt.Errorf("failed to load agents: %w", err)
@@ -55,6 +57,65 @@ func (s *AgentManagerService) Initialize(ctx context.Context) error {
 
 	slog.Info("Agent manager initialized", "count", len(agents))
 	return nil
+}
+
+func (s *AgentManagerService) ensureDefaultAgents(ctx context.Context) {
+	defaultAgents := []struct {
+		ID           string
+		Name         string
+		Description  string
+		Instructions string
+		Type         models.AgentType
+	}{
+		{
+			ID:          "plan",
+			Name:        "Plan Agent",
+			Description: "负责分析和规划任务，将复杂问题分解为可执行的步骤",
+			Instructions: `你是一个专业的任务规划助手。你的职责是：
+1. 分析用户的需求和目标
+2. 将复杂任务分解为清晰、可执行的步骤
+3. 评估每个步骤的优先级和依赖关系
+4. 提供结构化的执行计划
+
+请用中文回复，保持简洁明了。`,
+			Type: models.AgentTypeMain,
+		},
+		{
+			ID:          "build",
+			Name:        "Build Agent",
+			Description: "负责执行具体任务，包括代码编写、文件操作等实际工作",
+			Instructions: `你是一个专业的任务执行助手。你的职责是：
+1. 根据规划执行具体的任务步骤
+2. 编写代码、创建文件、修改配置等
+3. 解决执行过程中遇到的技术问题
+4. 验证执行结果是否符合预期
+
+请用中文回复，提供详细的执行说明。`,
+			Type: models.AgentTypeMain,
+		},
+	}
+
+	for _, cfg := range defaultAgents {
+		existing, err := s.agentService.GetByID(cfg.ID)
+		if err == nil && existing != nil {
+			continue
+		}
+
+		agent := &models.Agent{
+			Name:         cfg.Name,
+			Description:  cfg.Description,
+			Instructions: cfg.Instructions,
+			Type:         cfg.Type,
+			IsSubAgent:   false,
+		}
+		agent.ID = cfg.ID
+
+		if err := s.agentService.Create(agent); err != nil {
+			slog.Error("Failed to create default agent", "id", cfg.ID, "error", err)
+		} else {
+			slog.Info("Created default agent", "id", cfg.ID, "name", cfg.Name)
+		}
+	}
 }
 
 func (s *AgentManagerService) loadAgent(ctx context.Context, agent *models.Agent) error {
