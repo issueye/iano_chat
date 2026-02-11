@@ -52,89 +52,68 @@
         <CardDescription>管理所有 AI Agent 的配置信息</CardDescription>
       </CardHeader>
       <CardContent>
-        <div class="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>名称</TableHead>
-                <TableHead>类型</TableHead>
-                <TableHead>模型</TableHead>
-                <TableHead>Tools</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead class="w-32">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow v-if="loading">
-                <TableCell colspan="6" class="text-center py-8">
-                  <div class="flex items-center justify-center gap-2">
-                    <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                    <span>加载中...</span>
-                  </div>
-                </TableCell>
-              </TableRow>
-              <template v-else-if="items.length > 0">
-                <TableRow v-for="item in items" :key="item.id">
-                  <TableCell>
-                    <div class="flex items-center gap-3">
-                      <div class="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                        <Bot class="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p class="font-medium">{{ item.name }}</p>
-                        <p class="text-xs text-muted-foreground truncate max-w-[200px]">
-                          {{ item.description }}
-                        </p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{{ item.type }}</Badge>
-                  </TableCell>
-                  <TableCell class="text-sm text-muted-foreground">
-                    {{ item.model || "-" }}
-                  </TableCell>
-                  <TableCell>
-                    <Tooltip :content="item.tools || '无'">
-                      <Badge variant="secondary">
-                        {{ item.tools_count || 0 }} 个
-                      </Badge>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell>
-                    <Badge :variant="item.status === 'active' ? 'default' : 'outline'">
-                      {{ item.status === "active" ? "启用" : "禁用" }}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div class="flex items-center gap-1">
-                      <Tooltip content="配置">
-                        <Button variant="ghost" size="icon-sm" @click="handleConfigure(item)">
-                          <Settings2 class="h-4 w-4" />
-                        </Button>
-                      </Tooltip>
-                      <Tooltip content="编辑">
-                        <Button variant="ghost" size="icon-sm" @click="handleEdit(item)">
-                          <Pencil class="h-4 w-4" />
-                        </Button>
-                      </Tooltip>
-                      <Tooltip content="删除">
-                        <Button variant="ghost" size="icon-sm" class="text-destructive" @click="handleDelete(item)">
-                          <Trash2 class="h-4 w-4" />
-                        </Button>
-                      </Tooltip>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              </template>
-              <TableRow v-else>
-                <TableCell colspan="6" class="text-center py-8 text-muted-foreground">
-                  暂无数据
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable
+          :data="items"
+          :columns="columns"
+          :loading="loading"
+        >
+          <!-- 名称列 -->
+          <template #name="{ row }">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                <Bot class="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p class="font-medium">{{ row.name }}</p>
+                <p class="text-xs text-muted-foreground truncate max-w-[200px]">
+                  {{ row.description }}
+                </p>
+              </div>
+            </div>
+          </template>
+          
+          <!-- 类型列 -->
+          <template #type="{ value }">
+            <Badge variant="outline">{{ value }}</Badge>
+          </template>
+          
+          <!-- 模型列 -->
+          <template #model="{ value }">
+            <span class="text-sm text-muted-foreground">{{ value || "-" }}</span>
+          </template>
+          
+          <!-- Tools 列 -->
+          <template #tools="{ row }">
+            <Tooltip :content="row.tools || '无'">
+              <Badge variant="secondary">
+                {{ row.tools_count || 0 }} 个
+              </Badge>
+            </Tooltip>
+          </template>
+          
+          <!-- 状态列 -->
+          <template #status="{ value }">
+            <Badge :variant="value === 'active' ? 'default' : 'outline'">
+              {{ value === "active" ? "启用" : "禁用" }}
+            </Badge>
+          </template>
+          
+          <!-- 操作列 -->
+          <template #actions="{ row }">
+            <div class="flex items-center gap-1">
+              <Tooltip content="编辑">
+                <Button variant="ghost" size="icon-sm" @click="handleEdit(row)">
+                  <Pencil class="h-4 w-4" />
+                </Button>
+              </Tooltip>
+              <Tooltip content="删除">
+                <Button variant="ghost" size="icon-sm" class="text-destructive" @click="handleDelete(row)">
+                  <Trash2 class="h-4 w-4" />
+                </Button>
+              </Tooltip>
+            </div>
+          </template>
+        </DataTable>
       </CardContent>
     </Card>
 
@@ -169,18 +148,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableCell,
-  TableHead,
-} from "@/components/ui/table";
+import { DataTable } from "@/components/ui/data-table";
 import { Tooltip } from "@/components/ui/tooltip";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import AgentFormDialog from "./components/AgentFormDialog.vue";
-import { Plus, Settings2, Pencil, Trash2, Bot, CheckCircle2, XCircle } from "lucide-vue-next";
+import { Plus, Pencil, Trash2, Bot, CheckCircle2, XCircle } from "lucide-vue-next";
+
+// 表格列配置
+const columns = [
+  { key: "name", title: "名称", width: "250px" },
+  { key: "type", title: "类型", width: "100px", align: "center" },
+  { key: "model", title: "模型", width: "150px" },
+  { key: "tools", title: "Tools", width: "100px", align: "center" },
+  { key: "status", title: "状态", width: "100px", align: "center" },
+  { title: "操作", slot: "actions", width: "100px", align: "center" },
+];
 
 // 数据状态
 const items = ref([]);
@@ -226,15 +208,6 @@ async function fetchData() {
  */
 function handleAdd() {
   editingItem.value = null;
-  formDialogOpen.value = true;
-}
-
-/**
- * 打开配置 Agent 弹窗
- * @param {Object} item - Agent 数据
- */
-function handleConfigure(item) {
-  editingItem.value = item;
   formDialogOpen.value = true;
 }
 

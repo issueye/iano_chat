@@ -61,89 +61,69 @@
         <CardDescription>管理所有工具扩展的配置信息</CardDescription>
       </CardHeader>
       <CardContent>
-        <div class="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>名称</TableHead>
-                <TableHead>类型</TableHead>
-                <TableHead>分类</TableHead>
-                <TableHead>版本</TableHead>
-                <TableHead>作者</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead class="w-32">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow v-if="loading">
-                <TableCell colspan="7" class="text-center py-8">
-                  <div class="flex items-center justify-center gap-2">
-                    <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                    <span>加载中...</span>
-                  </div>
-                </TableCell>
-              </TableRow>
-              <template v-else-if="items.length > 0">
-                <TableRow v-for="item in items" :key="item.id">
-                  <TableCell>
-                    <div class="flex items-center gap-3">
-                      <div class="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                        <Wrench class="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p class="font-medium">{{ item.name }}</p>
-                        <p class="text-xs text-muted-foreground truncate max-w-[180px]">
-                          {{ item.desc }}
-                        </p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge :variant="getTypeVariant(item.type)">{{ item.type }}</Badge>
-                  </TableCell>
-                  <TableCell class="text-sm text-muted-foreground">
-                    {{ item.category || "-" }}
-                  </TableCell>
-                  <TableCell class="text-sm text-muted-foreground">
-                    {{ item.version || "v1.0" }}
-                  </TableCell>
-                  <TableCell class="text-sm text-muted-foreground">
-                    {{ item.author || "-" }}
-                  </TableCell>
-                  <TableCell>
-                    <Badge :variant="item.status === 'active' ? 'default' : 'outline'">
-                      {{ item.status === "active" ? "启用" : "禁用" }}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div class="flex items-center gap-1">
-                      <Tooltip content="配置">
-                        <Button variant="ghost" size="icon-sm" @click="handleConfigure(item)">
-                          <Settings2 class="h-4 w-4" />
-                        </Button>
-                      </Tooltip>
-                      <Tooltip content="编辑">
-                        <Button variant="ghost" size="icon-sm" @click="handleEdit(item)">
-                          <Pencil class="h-4 w-4" />
-                        </Button>
-                      </Tooltip>
-                      <Tooltip content="删除">
-                        <Button variant="ghost" size="icon-sm" class="text-destructive" @click="handleDelete(item)">
-                          <Trash2 class="h-4 w-4" />
-                        </Button>
-                      </Tooltip>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              </template>
-              <TableRow v-else>
-                <TableCell colspan="7" class="text-center py-8 text-muted-foreground">
-                  暂无数据
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable
+          :data="items"
+          :columns="columns"
+          :loading="loading"
+        >
+          <!-- 名称列 -->
+          <template #name="{ row }">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                <Wrench class="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p class="font-medium">{{ row.name }}</p>
+                <p class="text-xs text-muted-foreground truncate max-w-[180px]">
+                  {{ row.desc }}
+                </p>
+              </div>
+            </div>
+          </template>
+          
+          <!-- 类型列 -->
+          <template #type="{ value }">
+            <Badge :variant="getTypeVariant(value)">{{ value }}</Badge>
+          </template>
+          
+          <!-- 分类列 -->
+          <template #category="{ value }">
+            <span class="text-sm text-muted-foreground">{{ value || "-" }}</span>
+          </template>
+          
+          <!-- 版本列 -->
+          <template #version="{ value }">
+            <span class="text-sm text-muted-foreground">{{ value || "v1.0" }}</span>
+          </template>
+          
+          <!-- 作者列 -->
+          <template #author="{ value }">
+            <span class="text-sm text-muted-foreground">{{ value || "-" }}</span>
+          </template>
+          
+          <!-- 状态列 -->
+          <template #status="{ value }">
+            <Badge :variant="value === 'active' ? 'default' : 'outline'">
+              {{ value === "active" ? "启用" : "禁用" }}
+            </Badge>
+          </template>
+          
+          <!-- 操作列 -->
+          <template #actions="{ row }">
+            <div class="flex items-center gap-1">
+              <Tooltip content="编辑">
+                <Button variant="ghost" size="icon-sm" @click="handleEdit(row)">
+                  <Pencil class="h-4 w-4" />
+                </Button>
+              </Tooltip>
+              <Tooltip content="删除">
+                <Button variant="ghost" size="icon-sm" class="text-destructive" @click="handleDelete(row)">
+                  <Trash2 class="h-4 w-4" />
+                </Button>
+              </Tooltip>
+            </div>
+          </template>
+        </DataTable>
       </CardContent>
     </Card>
 
@@ -178,18 +158,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableCell,
-  TableHead,
-} from "@/components/ui/table";
+import { DataTable } from "@/components/ui/data-table";
 import { Tooltip } from "@/components/ui/tooltip";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import ToolFormDialog from "./components/ToolFormDialog.vue";
-import { Plus, Settings2, Pencil, Trash2, Wrench, CheckCircle2, XCircle, Tag } from "lucide-vue-next";
+import { Plus, Pencil, Trash2, Wrench, CheckCircle2, XCircle, Tag } from "lucide-vue-next";
+
+// 表格列配置
+const columns = [
+  { key: "name", title: "名称", width: "220px" },
+  { key: "type", title: "类型", width: "100px", align: "center" },
+  { key: "category", title: "分类", width: "120px" },
+  { key: "version", title: "版本", width: "80px", align: "center" },
+  { key: "author", title: "作者", width: "120px" },
+  { key: "status", title: "状态", width: "100px", align: "center" },
+  { title: "操作", slot: "actions", width: "100px", align: "center" },
+];
 
 // 数据状态
 const items = ref([]);
@@ -252,15 +236,6 @@ async function fetchData() {
  */
 function handleAdd() {
   editingItem.value = null;
-  formDialogOpen.value = true;
-}
-
-/**
- * 打开配置 Tool 弹窗
- * @param {Object} item - Tool 数据
- */
-function handleConfigure(item) {
-  editingItem.value = item;
   formDialogOpen.value = true;
 }
 

@@ -52,77 +52,63 @@
         <CardDescription>管理所有 API 提供商的配置信息</CardDescription>
       </CardHeader>
       <CardContent>
-        <div class="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>名称</TableHead>
-                <TableHead>API Base URL</TableHead>
-                <TableHead>模型数量</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead>创建时间</TableHead>
-                <TableHead class="w-24">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow v-if="loading">
-                <TableCell colspan="6" class="text-center py-8">
-                  <div class="flex items-center justify-center gap-2">
-                    <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                    <span>加载中...</span>
-                  </div>
-                </TableCell>
-              </TableRow>
-              <template v-else-if="items.length > 0">
-                <TableRow v-for="item in items" :key="item.id">
-                  <TableCell>
-                    <div class="flex items-center gap-3">
-                      <div class="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                        <Building2 class="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p class="font-medium">{{ item.name }}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell class="text-muted-foreground text-sm max-w-[200px] truncate">
-                    {{ item.base_url }}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{{ item.models_count || 0 }}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge :variant="item.status === 'active' ? 'default' : 'outline'">
-                      {{ item.status === "active" ? "启用" : "禁用" }}
-                    </Badge>
-                  </TableCell>
-                  <TableCell class="text-muted-foreground text-sm">
-                    {{ formatDate(item.created_at) }}
-                  </TableCell>
-                  <TableCell>
-                    <div class="flex items-center gap-1">
-                      <Tooltip content="编辑">
-                        <Button variant="ghost" size="icon-sm" @click="handleEdit(item)">
-                          <Pencil class="h-4 w-4" />
-                        </Button>
-                      </Tooltip>
-                      <Tooltip content="删除">
-                        <Button variant="ghost" size="icon-sm" class="text-destructive" @click="handleDelete(item)">
-                          <Trash2 class="h-4 w-4" />
-                        </Button>
-                      </Tooltip>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              </template>
-              <TableRow v-else>
-                <TableCell colspan="6" class="text-center py-8 text-muted-foreground">
-                  暂无数据
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable
+          :data="items"
+          :columns="columns"
+          :loading="loading"
+        >
+          <!-- 名称列 -->
+          <template #name="{ row }">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                <Building2 class="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p class="font-medium">{{ row.name }}</p>
+              </div>
+            </div>
+          </template>
+          
+          <!-- API Base URL 列 -->
+          <template #api_base="{ value }">
+            <span class="text-muted-foreground text-sm max-w-[200px] truncate block">
+              {{ value }}
+            </span>
+          </template>
+          
+          <!-- 模型数量列 -->
+          <template #models_count="{ value }">
+            <Badge variant="secondary">{{ value || 0 }}</Badge>
+          </template>
+          
+          <!-- 状态列 -->
+          <template #status="{ value }">
+            <Badge :variant="value === 'active' ? 'default' : 'outline'">
+              {{ value === "active" ? "启用" : "禁用" }}
+            </Badge>
+          </template>
+          
+          <!-- 创建时间列 -->
+          <template #created_at="{ value }">
+            <span class="text-muted-foreground text-sm">{{ formatDate(value) }}</span>
+          </template>
+          
+          <!-- 操作列 -->
+          <template #actions="{ row }">
+            <div class="flex items-center gap-1">
+              <Tooltip content="编辑">
+                <Button variant="ghost" size="icon-sm" @click="handleEdit(row)">
+                  <Pencil class="h-4 w-4" />
+                </Button>
+              </Tooltip>
+              <Tooltip content="删除">
+                <Button variant="ghost" size="icon-sm" class="text-destructive" @click="handleDelete(row)">
+                  <Trash2 class="h-4 w-4" />
+                </Button>
+              </Tooltip>
+            </div>
+          </template>
+        </DataTable>
       </CardContent>
     </Card>
 
@@ -157,18 +143,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableCell,
-  TableHead,
-} from "@/components/ui/table";
+import { DataTable } from "@/components/ui/data-table";
 import { Tooltip } from "@/components/ui/tooltip";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import ProviderFormDialog from "./components/ProviderFormDialog.vue";
 import { Plus, Pencil, Trash2, Building2, CheckCircle2, XCircle } from "lucide-vue-next";
+
+// 表格列配置
+const columns = [
+  { key: "name", title: "名称", width: "200px" },
+  { key: "api_base", title: "API Base URL" },
+  { key: "models_count", title: "模型数量", width: "100px", align: "center" },
+  { key: "status", title: "状态", width: "100px", align: "center" },
+  { key: "created_at", title: "创建时间", width: "180px", slot: "created_at" },
+  { title: "操作", slot: "actions", width: "100px", align: "center" },
+];
 
 // 数据状态
 const items = ref([]);
@@ -197,7 +186,7 @@ const stats = computed(() => {
 function formatDate(dateStr) {
   if (!dateStr) return "-";
   const date = new Date(dateStr);
-  return date.toLocaleDateString("zh-CN");
+  return date.toLocaleDateString("zh-CN") + " " + date.toLocaleTimeString("zh-CN");
 }
 
 /**
