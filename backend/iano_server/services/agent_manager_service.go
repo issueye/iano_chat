@@ -313,8 +313,8 @@ func convertToConversationRounds(messages []models.Message) []*iano.Conversation
 	var currentRound *iano.ConversationRound
 
 	for _, msg := range messages {
-		content := msg.GetText()
-		if content == "" {
+		content, _ := msg.GetContent()
+		if content == nil {
 			continue
 		}
 
@@ -324,13 +324,25 @@ func convertToConversationRounds(messages []models.Message) []*iano.Conversation
 				rounds = append(rounds, currentRound)
 			}
 			currentRound = &iano.ConversationRound{
-				UserMessage: schema.UserMessage(content),
+				UserMessage: schema.UserMessage(content.Text),
 				Timestamp:   msg.CreatedAt,
 			}
 		case models.MessageTypeAssistant:
 			if currentRound != nil {
-				currentRound.AssistantMessage = schema.AssistantMessage(content, nil)
-				currentRound.TokenCount = estimateTokens(content)
+				// 处理工具调用
+				var toolCalls []schema.ToolCall
+				for _, tc := range content.ToolCalls {
+					toolCalls = append(toolCalls, schema.ToolCall{
+						ID:   tc.ID,
+						Type: tc.Type,
+						Function: schema.FunctionCall{
+							Name:      tc.Function.Name,
+							Arguments: tc.Function.Arguments,
+						},
+					})
+				}
+				currentRound.AssistantMessage = schema.AssistantMessage(content.Text, toolCalls)
+				currentRound.TokenCount = estimateTokens(content.Text)
 			}
 		}
 	}

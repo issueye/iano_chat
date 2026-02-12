@@ -196,6 +196,7 @@ func (a *Agent) AddToolToRegistry(name string, t tool.BaseTool) error {
 		ToolCallingModel: a.chatModel,
 		ToolsConfig:      toolsConfig,
 		MessageModifier:  a.messageModifier,
+		MaxStep:          30,
 	})
 	if err != nil {
 		return fmt.Errorf("创建代理失败: %w", err)
@@ -223,6 +224,7 @@ func (a *Agent) RemoveTool(name string) error {
 		ToolCallingModel: a.chatModel,
 		ToolsConfig:      toolsConfig,
 		MessageModifier:  a.messageModifier,
+		MaxStep:          30,
 	})
 	if err != nil {
 		return fmt.Errorf("创建代理失败: %w", err)

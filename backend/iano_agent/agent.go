@@ -92,6 +92,7 @@ func NewAgent(chatModel model.ToolCallingChatModel, opts ...Option) (*Agent, err
 		ToolCallingModel: chatModel,
 		ToolsConfig:      toolsConfig,
 		MessageModifier:  agent.messageModifier,
+		MaxStep:          30, // 增加最大步数，支持更多工具调用和推理轮次
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create react agent: %w", err)
