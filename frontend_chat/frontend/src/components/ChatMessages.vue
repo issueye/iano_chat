@@ -27,6 +27,13 @@
         {{ error }}
       </div>
     </div>
+    <Button
+      variant="ghost"
+      size="icon"
+      class="shrink-0 rounded-xl hover:bg-muted transition-colors h-8 w-8 absolute bottom-2 right-1/2 z-10"
+    >
+      <ArrowDownCircle class="h-8 w-8 text-muted-foreground" />
+    </Button>
   </ScrollArea>
 </template>
 
@@ -35,9 +42,9 @@
  * ChatMessages 组件 - 消息列表区域
  * 显示聊天消息列表、加载状态和错误信息
  */
-import ChatMessage from "./ChatMessage.vue"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, AlertCircle } from "lucide-vue-next"
+import ChatMessage from "./ChatMessage.vue";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, AlertCircle, ArrowDownCircle } from "lucide-vue-next";
 
 /**
  * 组件属性定义
@@ -58,5 +65,5 @@ defineProps({
     type: String,
     default: null,
   },
-})
+});
 </script>
