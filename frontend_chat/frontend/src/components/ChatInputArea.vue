@@ -6,7 +6,7 @@
         :agents="agents"
         :model-value="currentAgentId"
         @update:model-value="emit('update:agent', $event)"
-        @send="emit('send', $event, $event)"
+        @send="(text, directory) => emit('send', text, directory)"
         @select-directory="emit('select-directory', $event)"
       />
     </div>
