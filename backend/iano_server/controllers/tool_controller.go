@@ -18,29 +18,40 @@ func NewToolController(toolService *services.ToolService) *ToolController {
 }
 
 type CreateToolRequest struct {
-	Name       string `json:"name"`
-	Desc       string `json:"desc"`
-	Returns    string `json:"returns"`
-	Example    string `json:"example,omitempty"`
-	Type       string `json:"type"`
-	Config     string `json:"config,omitempty"`
-	Parameters string `json:"parameters,omitempty"`
-	Version    string `json:"version,omitempty"`
-	Author     string `json:"author,omitempty"`
+	Name       string `json:"name" example:"file_read"`
+	Desc       string `json:"desc" example:"读取文件内容"`
+	Returns    string `json:"returns" example:"文件内容字符串"`
+	Example    string `json:"example,omitempty" example:"读取 /path/to/file.txt"`
+	Type       string `json:"type" example:"builtin"`
+	Config     string `json:"config,omitempty" example:"{}"`
+	Parameters string `json:"parameters,omitempty" example:"{\"path\": \"string\"}"`
+	Version    string `json:"version,omitempty" example:"1.0.0"`
+	Author     string `json:"author,omitempty" example:"system"`
 }
 
 type UpdateToolRequest struct {
-	Name       *string `json:"name,omitempty"`
-	Desc       *string `json:"desc,omitempty"`
-	Returns    *string `json:"returns,omitempty"`
-	Example    *string `json:"example,omitempty"`
-	Type       *string `json:"type,omitempty"`
-	Config     *string `json:"config,omitempty"`
-	Parameters *string `json:"parameters,omitempty"`
-	Version    *string `json:"version,omitempty"`
-	Author     *string `json:"author,omitempty"`
+	Name       *string `json:"name,omitempty" example:"file_read"`
+	Desc       *string `json:"desc,omitempty" example:"读取文件内容"`
+	Returns    *string `json:"returns,omitempty" example:"文件内容字符串"`
+	Example    *string `json:"example,omitempty" example:"读取 /path/to/file.txt"`
+	Type       *string `json:"type,omitempty" example:"builtin"`
+	Config     *string `json:"config,omitempty" example:"{}"`
+	Parameters *string `json:"parameters,omitempty" example:"{\"path\": \"string\"}"`
+	Version    *string `json:"version,omitempty" example:"1.0.0"`
+	Author     *string `json:"author,omitempty" example:"system"`
 }
 
+// Create godoc
+// @Summary 创建工具
+// @Description 创建一个新的工具定义
+// @Tags Tool
+// @Accept json
+// @Produce json
+// @Param tool body CreateToolRequest true "工具信息"
+// @Success 201 {object} models.Response{data=models.Tool}
+// @Failure 400 {object} models.Response
+// @Failure 500 {object} models.Response
+// @Router /api/tools [post]
 func (c *ToolController) Create(ctx *web.Context) {
 	var req CreateToolRequest
 	if err := ctx.BindAndValidate(&req); err != nil {
@@ -70,6 +81,15 @@ func (c *ToolController) Create(ctx *web.Context) {
 	ctx.JSON(http.StatusCreated, models.Success(tool))
 }
 
+// GetByID godoc
+// @Summary 获取工具详情
+// @Description 根据 ID 获取工具详情
+// @Tags Tool
+// @Produce json
+// @Param id path string true "工具 ID"
+// @Success 200 {object} models.Response{data=models.Tool}
+// @Failure 404 {object} models.Response
+// @Router /api/tools/{id} [get]
 func (c *ToolController) GetByID(ctx *web.Context) {
 	id := ctx.Param("id")
 	tool, err := c.toolService.GetByID(id)
@@ -80,6 +100,14 @@ func (c *ToolController) GetByID(ctx *web.Context) {
 	ctx.JSON(http.StatusOK, models.Success(tool))
 }
 
+// GetAll godoc
+// @Summary 获取所有工具
+// @Description 获取所有工具列表
+// @Tags Tool
+// @Produce json
+// @Success 200 {object} models.Response{data=[]models.Tool}
+// @Failure 500 {object} models.Response
+// @Router /api/tools [get]
 func (c *ToolController) GetAll(ctx *web.Context) {
 	tools, err := c.toolService.GetAll()
 	if err != nil {
@@ -89,6 +117,15 @@ func (c *ToolController) GetAll(ctx *web.Context) {
 	ctx.JSON(http.StatusOK, models.Success(tools))
 }
 
+// GetByType godoc
+// @Summary 按类型获取工具
+// @Description 根据类型获取工具列表
+// @Tags Tool
+// @Produce json
+// @Param type query string false "工具类型 (builtin/custom/mcp)"
+// @Success 200 {object} models.Response{data=[]models.Tool}
+// @Failure 500 {object} models.Response
+// @Router /api/tools/type [get]
 func (c *ToolController) GetByType(ctx *web.Context) {
 	toolType := ctx.Query("type")
 	if toolType == "" {
@@ -104,6 +141,15 @@ func (c *ToolController) GetByType(ctx *web.Context) {
 	ctx.JSON(http.StatusOK, models.Success(tools))
 }
 
+// GetByStatus godoc
+// @Summary 按状态获取工具
+// @Description 根据状态获取工具列表
+// @Tags Tool
+// @Produce json
+// @Param status query string false "工具状态 (active/inactive/deprecated)"
+// @Success 200 {object} models.Response{data=[]models.Tool}
+// @Failure 500 {object} models.Response
+// @Router /api/tools/status [get]
 func (c *ToolController) GetByStatus(ctx *web.Context) {
 	status := ctx.Query("status")
 	if status == "" {
@@ -119,6 +165,18 @@ func (c *ToolController) GetByStatus(ctx *web.Context) {
 	ctx.JSON(http.StatusOK, models.Success(tools))
 }
 
+// Update godoc
+// @Summary 更新工具
+// @Description 更新工具信息
+// @Tags Tool
+// @Accept json
+// @Produce json
+// @Param id path string true "工具 ID"
+// @Param tool body UpdateToolRequest true "更新内容"
+// @Success 200 {object} models.Response{data=models.Tool}
+// @Failure 400 {object} models.Response
+// @Failure 500 {object} models.Response
+// @Router /api/tools/{id} [put]
 func (c *ToolController) Update(ctx *web.Context) {
 	id := ctx.Param("id")
 	var req UpdateToolRequest
@@ -165,6 +223,18 @@ func (c *ToolController) Update(ctx *web.Context) {
 	ctx.JSON(http.StatusOK, models.Success(tool))
 }
 
+// UpdateConfig godoc
+// @Summary 更新工具配置
+// @Description 更新指定工具的配置
+// @Tags Tool
+// @Accept json
+// @Produce json
+// @Param id path string true "工具 ID"
+// @Param config body map[string]string true "配置信息"
+// @Success 200 {object} models.Response{data=models.Tool}
+// @Failure 400 {object} models.Response
+// @Failure 500 {object} models.Response
+// @Router /api/tools/{id}/config [put]
 func (c *ToolController) UpdateConfig(ctx *web.Context) {
 	id := ctx.Param("id")
 	var req struct {
@@ -184,6 +254,15 @@ func (c *ToolController) UpdateConfig(ctx *web.Context) {
 	ctx.JSON(http.StatusOK, models.Success(tool))
 }
 
+// Delete godoc
+// @Summary 删除工具
+// @Description 删除指定工具
+// @Tags Tool
+// @Produce json
+// @Param id path string true "工具 ID"
+// @Success 200 {object} models.Response
+// @Failure 500 {object} models.Response
+// @Router /api/tools/{id} [delete]
 func (c *ToolController) Delete(ctx *web.Context) {
 	id := ctx.Param("id")
 	if err := c.toolService.Delete(id); err != nil {
@@ -193,6 +272,15 @@ func (c *ToolController) Delete(ctx *web.Context) {
 	ctx.JSON(http.StatusOK, models.Success(map[string]string{"message": "Tool deleted successfully"}))
 }
 
+// Test godoc
+// @Summary 测试工具
+// @Description 测试工具定义是否正确加载
+// @Tags Tool
+// @Produce json
+// @Param id path string true "工具 ID"
+// @Success 200 {object} models.Response
+// @Failure 404 {object} models.Response
+// @Router /api/tools/{id}/test [get]
 func (c *ToolController) Test(ctx *web.Context) {
 	id := ctx.Param("id")
 	tool, err := c.toolService.GetByID(id)

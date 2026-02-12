@@ -1,0 +1,1847 @@
+basePath: /
+definitions:
+  controllers.AddFeedbackRequest:
+    properties:
+      comment:
+        example: 很有帮助
+        type: string
+      rating:
+        example: like
+        type: string
+    type: object
+  controllers.CreateAgentRequest:
+    properties:
+      description:
+        example: 通用助手
+        type: string
+      instructions:
+        example: 你是一个智能助手
+        type: string
+      is_sub_agent:
+        example: false
+        type: boolean
+      model:
+        example: gpt-4
+        type: string
+      name:
+        example: 助手
+        type: string
+      provider_id:
+        example: provider-001
+        type: string
+      tools:
+        example: file_read,file_write
+        type: string
+      type:
+        example: main
+        type: string
+    type: object
+  controllers.CreateMessageRequest:
+    properties:
+      content:
+        example: 你好
+        type: string
+      parent_id:
+        example: msg-001
+        type: string
+      session_id:
+        example: session-001
+        type: string
+      status:
+        example: completed
+        type: string
+      type:
+        example: user
+        type: string
+    type: object
+  controllers.CreateProviderRequest:
+    properties:
+      api_key:
+        example: sk-xxx
+        type: string
+      base_url:
+        example: https://api.openai.com/v1
+        type: string
+      is_default:
+        example: true
+        type: boolean
+      max_tokens:
+        example: 2000
+        type: integer
+      model:
+        example: gpt-4
+        type: string
+      name:
+        example: OpenAI
+        type: string
+      temperature:
+        example: 0.7
+        type: number
+    required:
+    - api_key
+    - base_url
+    - model
+    - name
+    type: object
+  controllers.CreateSessionRequest:
+    properties:
+      title:
+        example: 新会话
+        type: string
+    type: object
+  controllers.CreateToolRequest:
+    properties:
+      author:
+        example: system
+        type: string
+      config:
+        example: '{}'
+        type: string
+      desc:
+        example: 读取文件内容
+        type: string
+      example:
+        example: 读取 /path/to/file.txt
+        type: string
+      name:
+        example: file_read
+        type: string
+      parameters:
+        example: '{"path": "string"}'
+        type: string
+      returns:
+        example: 文件内容字符串
+        type: string
+      type:
+        example: builtin
+        type: string
+      version:
+        example: 1.0.0
+        type: string
+    type: object
+  controllers.StreamChatRequest:
+    properties:
+      agent_id:
+        example: default
+        type: string
+      message:
+        example: 你好
+        type: string
+      session_id:
+        example: session-001
+        type: string
+      work_dir:
+        example: E:\codes\project
+        type: string
+    required:
+    - message
+    - session_id
+    type: object
+  controllers.UpdateAgentRequest:
+    properties:
+      description:
+        example: 通用助手
+        type: string
+      instructions:
+        example: 你是一个智能助手
+        type: string
+      is_sub_agent:
+        example: false
+        type: boolean
+      model:
+        example: gpt-4
+        type: string
+      name:
+        example: 助手
+        type: string
+      provider_id:
+        example: provider-001
+        type: string
+      tools:
+        example: file_read,file_write
+        type: string
+      type:
+        example: main
+        type: string
+    type: object
+  controllers.UpdateMessageRequest:
+    properties:
+      content:
+        example: 更新后的内容
+        type: string
+      feedback_comment:
+        example: 很有帮助
+        type: string
+      feedback_rating:
+        example: like
+        type: string
+      input_tokens:
+        example: 100
+        type: integer
+      output_tokens:
+        example: 200
+        type: integer
+      status:
+        example: completed
+        type: string
+    type: object
+  controllers.UpdateProviderRequest:
+    properties:
+      api_key:
+        example: sk-xxx
+        type: string
+      base_url:
+        example: https://api.openai.com/v1
+        type: string
+      is_default:
+        example: true
+        type: boolean
+      max_tokens:
+        example: 2000
+        type: integer
+      model:
+        example: gpt-4
+        type: string
+      name:
+        example: OpenAI
+        type: string
+      temperature:
+        example: 0.7
+        type: number
+    type: object
+  controllers.UpdateSessionConfigRequest:
+    properties:
+      config:
+        $ref: '#/definitions/models.SessionConfig'
+    type: object
+  controllers.UpdateSessionRequest:
+    properties:
+      config:
+        $ref: '#/definitions/models.SessionConfig'
+      status:
+        example: active
+        type: string
+      title:
+        example: 我的会话
+        type: string
+    type: object
+  controllers.UpdateToolRequest:
+    properties:
+      author:
+        example: system
+        type: string
+      config:
+        example: '{}'
+        type: string
+      desc:
+        example: 读取文件内容
+        type: string
+      example:
+        example: 读取 /path/to/file.txt
+        type: string
+      name:
+        example: file_read
+        type: string
+      parameters:
+        example: '{"path": "string"}'
+        type: string
+      returns:
+        example: 文件内容字符串
+        type: string
+      type:
+        example: builtin
+        type: string
+      version:
+        example: 1.0.0
+        type: string
+    type: object
+  models.Agent:
+    properties:
+      created_at:
+        description: 创建时间
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      instructions:
+        type: string
+      is_sub_agent:
+        type: boolean
+      model:
+        type: string
+      name:
+        type: string
+      provider_id:
+        type: string
+      tools:
+        type: string
+      type:
+        $ref: '#/definitions/models.AgentType'
+      updated_at:
+        description: 更新时间
+        type: string
+    type: object
+  models.AgentType:
+    enum:
+    - main
+    - sub
+    - custom
+    type: string
+    x-enum-varnames:
+    - AgentTypeMain
+    - AgentTypeSub
+    - AgentTypeCustom
+  models.FeedbackRating:
+    enum:
+    - like
+    - dislike
+    type: string
+    x-enum-varnames:
+    - FeedbackRatingLike
+    - FeedbackRatingDislike
+  models.JSONTime:
+    properties:
+      time.Time:
+        type: string
+      valid:
+        description: 用于处理 NULL 值
+        type: boolean
+    type: object
+  models.Message:
+    properties:
+      content:
+        type: string
+      created_at:
+        description: 创建时间
+        type: string
+      feedback_at:
+        $ref: '#/definitions/models.JSONTime'
+      feedback_comment:
+        type: string
+      feedback_rating:
+        $ref: '#/definitions/models.FeedbackRating'
+      id:
+        type: string
+      input_tokens:
+        type: integer
+      output_tokens:
+        type: integer
+      parent_id:
+        type: string
+      session_id:
+        type: string
+      status:
+        $ref: '#/definitions/models.MessageStatus'
+      type:
+        $ref: '#/definitions/models.MessageType'
+      updated_at:
+        description: 更新时间
+        type: string
+    type: object
+  models.MessageStatus:
+    enum:
+    - sending
+    - completed
+    - failed
+    - streaming
+    type: string
+    x-enum-varnames:
+    - MessageStatusSending
+    - MessageStatusCompleted
+    - MessageStatusFailed
+    - MessageStatusStreaming
+  models.MessageType:
+    enum:
+    - user
+    - assistant
+    - system
+    - tool
+    type: string
+    x-enum-varnames:
+    - MessageTypeUser
+    - MessageTypeAssistant
+    - MessageTypeSystem
+    - MessageTypeTool
+  models.Provider:
+    properties:
+      api_key:
+        type: string
+      base_url:
+        type: string
+      created_at:
+        description: 创建时间
+        type: string
+      id:
+        type: string
+      is_default:
+        type: boolean
+      max_tokens:
+        type: integer
+      model:
+        type: string
+      name:
+        type: string
+      temperature:
+        type: number
+      updated_at:
+        description: 更新时间
+        type: string
+    type: object
+  models.Response:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data: {}
+      message:
+        example: success
+        type: string
+    type: object
+  models.Session:
+    properties:
+      created_at:
+        description: 创建时间
+        type: string
+      id:
+        type: string
+      last_active_at:
+        $ref: '#/definitions/models.JSONTime'
+      message_count:
+        type: integer
+      status:
+        $ref: '#/definitions/models.SessionStatus'
+      title:
+        type: string
+      total_tokens:
+        type: integer
+      updated_at:
+        description: 更新时间
+        type: string
+    type: object
+  models.SessionConfig:
+    properties:
+      enable_rate_limit:
+        type: boolean
+      enable_summary:
+        type: boolean
+      enable_tools:
+        type: boolean
+      keep_rounds:
+        type: integer
+      max_tokens:
+        type: integer
+      model_id:
+        type: integer
+      rate_limit_rpm:
+        type: integer
+      selected_tools:
+        items:
+          type: string
+        type: array
+      system_prompt:
+        type: string
+      temperature:
+        type: number
+    type: object
+  models.SessionStatus:
+    enum:
+    - active
+    - paused
+    - completed
+    - archived
+    type: string
+    x-enum-varnames:
+    - SessionStatusActive
+    - SessionStatusPaused
+    - SessionStatusCompleted
+    - SessionStatusArchived
+  models.Tool:
+    properties:
+      author:
+        description: 作者
+        type: string
+      call_count:
+        description: 调用次数
+        type: integer
+      config:
+        description: 工具配置（JSON）
+        type: string
+      created_at:
+        description: 创建时间
+        type: string
+      desc:
+        type: string
+      error_count:
+        description: 错误次数
+        type: integer
+      example:
+        description: 使用示例
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      parameters:
+        description: 参数定义（JSON）
+        type: string
+      returns:
+        description: 返回值描述
+        type: string
+      script_content:
+        description: 脚本内容（仅对脚本工具）
+        type: string
+      status:
+        $ref: '#/definitions/models.ToolStatus'
+      type:
+        $ref: '#/definitions/models.ToolType'
+      updated_at:
+        description: 更新时间
+        type: string
+      version:
+        description: 版本
+        type: string
+    type: object
+  models.ToolStatus:
+    enum:
+    - enabled
+    - disabled
+    - error
+    type: string
+    x-enum-comments:
+      ToolStatusDisabled: 禁用
+      ToolStatusEnabled: 启用
+      ToolStatusError: 错误
+    x-enum-descriptions:
+    - 启用
+    - 禁用
+    - 错误
+    x-enum-varnames:
+    - ToolStatusEnabled
+    - ToolStatusDisabled
+    - ToolStatusError
+  models.ToolType:
+    enum:
+    - builtin
+    - custom
+    - external
+    - plugin
+    - script
+    type: string
+    x-enum-comments:
+      ToolTypeBuiltin: 内置工具
+      ToolTypeCustom: 自定义工具
+      ToolTypeExternal: 外部工具（API 调用）
+      ToolTypePlugin: 插件工具
+      ToolTypeScript: 脚本工具（JavaScript）
+    x-enum-descriptions:
+    - 内置工具
+    - 自定义工具
+    - 外部工具（API 调用）
+    - 插件工具
+    - 脚本工具（JavaScript）
+    x-enum-varnames:
+    - ToolTypeBuiltin
+    - ToolTypeCustom
+    - ToolTypeExternal
+    - ToolTypePlugin
+    - ToolTypeScript
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: IANO Chat 是一个智能对话系统，支持多 Agent、工具调用、流式响应等功能。
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: IANO Chat API
+  version: "1.0"
+paths:
+  /api/agents:
+    get:
+      description: 获取所有 Agent 列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Agent'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 获取所有 Agent
+      tags:
+      - Agent
+    post:
+      consumes:
+      - application/json
+      description: 创建一个新的 Agent
+      parameters:
+      - description: Agent 信息
+        in: body
+        name: agent
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateAgentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Agent'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 创建 Agent
+      tags:
+      - Agent
+  /api/agents/{id}:
+    delete:
+      description: 删除指定 Agent
+      parameters:
+      - description: Agent ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 删除 Agent
+      tags:
+      - Agent
+    get:
+      description: 根据 ID 获取 Agent 详情
+      parameters:
+      - description: Agent ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Agent'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 获取 Agent 详情
+      tags:
+      - Agent
+    put:
+      consumes:
+      - application/json
+      description: 更新 Agent 信息
+      parameters:
+      - description: Agent ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 更新内容
+        in: body
+        name: agent
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateAgentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Agent'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 更新 Agent
+      tags:
+      - Agent
+  /api/agents/{id}/tools:
+    post:
+      consumes:
+      - application/json
+      description: 为指定 Agent 添加工具
+      parameters:
+      - description: Agent ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 工具 ID
+        in: body
+        name: tool
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 为 Agent 添加工具
+      tags:
+      - Agent
+  /api/agents/{id}/tools/{tool_name}:
+    delete:
+      description: 从 Agent 中移除指定工具
+      parameters:
+      - description: Agent ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 工具名称
+        in: path
+        name: tool_name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 移除 Agent 工具
+      tags:
+      - Agent
+  /api/agents/type:
+    get:
+      description: 根据类型获取 Agent 列表
+      parameters:
+      - description: Agent 类型 (main/sub/custom)
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Agent'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 按类型获取 Agent
+      tags:
+      - Agent
+  /api/chat/session/{session_id}:
+    delete:
+      description: 清空指定会话的所有消息
+      parameters:
+      - description: 会话 ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 清空会话消息
+      tags:
+      - Chat
+  /api/chat/stream:
+    post:
+      consumes:
+      - application/json
+      description: 与 AI 进行流式对话，支持工具调用
+      parameters:
+      - description: 聊天请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.StreamChatRequest'
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE 流式响应
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 流式聊天
+      tags:
+      - Chat
+  /api/messages:
+    delete:
+      description: 删除指定会话的所有消息
+      parameters:
+      - description: 会话 ID
+        in: query
+        name: session_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 删除会话所有消息
+      tags:
+      - Message
+    get:
+      description: 获取所有消息列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Message'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 获取所有消息
+      tags:
+      - Message
+    post:
+      consumes:
+      - application/json
+      description: 创建一条新消息
+      parameters:
+      - description: 消息信息
+        in: body
+        name: message
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Message'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 创建消息
+      tags:
+      - Message
+  /api/messages/{id}:
+    delete:
+      description: 删除指定消息
+      parameters:
+      - description: 消息 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 删除消息
+      tags:
+      - Message
+    get:
+      description: 根据 ID 获取消息详情
+      parameters:
+      - description: 消息 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Message'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 获取消息详情
+      tags:
+      - Message
+    put:
+      consumes:
+      - application/json
+      description: 更新消息信息
+      parameters:
+      - description: 消息 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 更新内容
+        in: body
+        name: message
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Message'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 更新消息
+      tags:
+      - Message
+  /api/messages/{id}/feedback:
+    post:
+      consumes:
+      - application/json
+      description: 为消息添加点赞/点踩反馈
+      parameters:
+      - description: 消息 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 反馈信息
+        in: body
+        name: feedback
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.AddFeedbackRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Message'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 添加消息反馈
+      tags:
+      - Message
+  /api/messages/session:
+    get:
+      description: 根据会话 ID 获取消息列表
+      parameters:
+      - description: 会话 ID
+        in: query
+        name: session_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Message'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 按会话获取消息
+      tags:
+      - Message
+  /api/messages/type:
+    get:
+      description: 根据类型获取消息列表
+      parameters:
+      - description: 消息类型 (user/assistant/system/tool)
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Message'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 按类型获取消息
+      tags:
+      - Message
+  /api/providers:
+    get:
+      description: 获取所有 Provider 列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Provider'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 获取所有 Provider
+      tags:
+      - Provider
+    post:
+      consumes:
+      - application/json
+      description: 创建一个新的模型提供商配置
+      parameters:
+      - description: Provider 信息
+        in: body
+        name: provider
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateProviderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Provider'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 创建 Provider
+      tags:
+      - Provider
+  /api/providers/{id}:
+    delete:
+      description: 删除指定 Provider
+      parameters:
+      - description: Provider ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 删除 Provider
+      tags:
+      - Provider
+    get:
+      description: 根据 ID 获取 Provider 详情
+      parameters:
+      - description: Provider ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Provider'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 获取 Provider 详情
+      tags:
+      - Provider
+    put:
+      consumes:
+      - application/json
+      description: 更新 Provider 配置
+      parameters:
+      - description: Provider ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 更新内容
+        in: body
+        name: provider
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateProviderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Provider'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 更新 Provider
+      tags:
+      - Provider
+  /api/providers/default:
+    get:
+      description: 获取默认的 Provider 配置
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Provider'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 获取默认 Provider
+      tags:
+      - Provider
+  /api/sessions:
+    get:
+      description: 获取所有会话列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Session'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 获取所有会话
+      tags:
+      - Session
+    post:
+      consumes:
+      - application/json
+      description: 创建一个新的会话
+      parameters:
+      - description: 会话信息
+        in: body
+        name: session
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateSessionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Session'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 创建会话
+      tags:
+      - Session
+  /api/sessions/{id}:
+    delete:
+      description: 删除指定会话
+      parameters:
+      - description: 会话 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 删除会话
+      tags:
+      - Session
+    get:
+      description: 根据 ID 获取会话详情
+      parameters:
+      - description: 会话 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Session'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 获取会话详情
+      tags:
+      - Session
+    put:
+      consumes:
+      - application/json
+      description: 更新会话信息
+      parameters:
+      - description: 会话 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 更新内容
+        in: body
+        name: session
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateSessionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Session'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 更新会话
+      tags:
+      - Session
+  /api/sessions/{id}/config:
+    get:
+      description: 获取指定会话的配置
+      parameters:
+      - description: 会话 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.SessionConfig'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 获取会话配置
+      tags:
+      - Session
+    put:
+      consumes:
+      - application/json
+      description: 更新指定会话的配置
+      parameters:
+      - description: 会话 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 配置信息
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateSessionConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Session'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 更新会话配置
+      tags:
+      - Session
+  /api/sessions/status:
+    get:
+      description: 根据状态获取会话列表
+      parameters:
+      - description: 会话状态 (active/paused/completed/archived)
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Session'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 按状态获取会话
+      tags:
+      - Session
+  /api/tools:
+    get:
+      description: 获取所有工具列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Tool'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 获取所有工具
+      tags:
+      - Tool
+    post:
+      consumes:
+      - application/json
+      description: 创建一个新的工具定义
+      parameters:
+      - description: 工具信息
+        in: body
+        name: tool
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateToolRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Tool'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 创建工具
+      tags:
+      - Tool
+  /api/tools/{id}:
+    delete:
+      description: 删除指定工具
+      parameters:
+      - description: 工具 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 删除工具
+      tags:
+      - Tool
+    get:
+      description: 根据 ID 获取工具详情
+      parameters:
+      - description: 工具 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Tool'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 获取工具详情
+      tags:
+      - Tool
+    put:
+      consumes:
+      - application/json
+      description: 更新工具信息
+      parameters:
+      - description: 工具 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 更新内容
+        in: body
+        name: tool
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateToolRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Tool'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 更新工具
+      tags:
+      - Tool
+  /api/tools/{id}/config:
+    put:
+      consumes:
+      - application/json
+      description: 更新指定工具的配置
+      parameters:
+      - description: 工具 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 配置信息
+        in: body
+        name: config
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Tool'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 更新工具配置
+      tags:
+      - Tool
+  /api/tools/{id}/test:
+    get:
+      description: 测试工具定义是否正确加载
+      parameters:
+      - description: 工具 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 测试工具
+      tags:
+      - Tool
+  /api/tools/status:
+    get:
+      description: 根据状态获取工具列表
+      parameters:
+      - description: 工具状态 (active/inactive/deprecated)
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Tool'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 按状态获取工具
+      tags:
+      - Tool
+  /api/tools/type:
+    get:
+      description: 根据类型获取工具列表
+      parameters:
+      - description: 工具类型 (builtin/custom/mcp)
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Tool'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: 按类型获取工具
+      tags:
+      - Tool
+schemes:
+- http
+- https
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

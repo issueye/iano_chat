@@ -36,24 +36,24 @@ func NewChatController(
 }
 
 type ChatRequest struct {
-	SessionID string `json:"session_id" validate:"required"`
-	AgentID   string `json:"agent_id"`
-	Message   string `json:"message" validate:"required"`
+	SessionID string `json:"session_id" validate:"required" example:"session-001"`
+	AgentID   string `json:"agent_id" example:"default"`
+	Message   string `json:"message" validate:"required" example:"你好"`
 }
 
 type ChatResponse struct {
-	Content    string `json:"content"`
-	TokenUsage int64  `json:"token_usage"`
-	Duration   int64  `json:"duration_ms"`
-	SessionID  string `json:"session_id"`
-	AgentID    string `json:"agent_id"`
+	Content    string `json:"content" example:"你好！有什么可以帮助你的吗？"`
+	TokenUsage int64  `json:"token_usage" example:"150"`
+	Duration   int64  `json:"duration_ms" example:"1234"`
+	SessionID  string `json:"session_id" example:"session-001"`
+	AgentID    string `json:"agent_id" example:"default"`
 }
 
 type StreamChatRequest struct {
-	SessionID string `json:"session_id" validate:"required"` // 会话 ID，用于关联消息
-	AgentID   string `json:"agent_id"`                       // 可选，默认使用 "default"
-	Message   string `json:"message" validate:"required"`    // 用户输入的消息
-	WorkDir   string `json:"work_dir"`                       // 用户选择的工作目录，可能是项目目录
+	SessionID string `json:"session_id" validate:"required" example:"session-001"`
+	AgentID   string `json:"agent_id" example:"default"`
+	Message   string `json:"message" validate:"required" example:"你好"`
+	WorkDir   string `json:"work_dir" example:"E:\\codes\\project"`
 }
 
 func (c *ChatController) chatWithProvider(ctx context.Context, message string) (string, error) {
@@ -85,6 +85,17 @@ func (c *ChatController) chatWithProvider(ctx context.Context, message string) (
 	return resp.Content, nil
 }
 
+// StreamChat godoc
+// @Summary 流式聊天
+// @Description 与 AI 进行流式对话，支持工具调用
+// @Tags Chat
+// @Accept json
+// @Produce text/event-stream
+// @Param request body StreamChatRequest true "聊天请求"
+// @Success 200 {string} string "SSE 流式响应"
+// @Failure 400 {object} models.Response
+// @Failure 500 {object} models.Response
+// @Router /api/chat/stream [post]
 func (c *ChatController) StreamChat(ctx *web.Context) {
 	var req StreamChatRequest
 	if err := ctx.BindAndValidate(&req); err != nil {
@@ -257,6 +268,16 @@ func JSONString(v interface{}) string {
 	return string(data)
 }
 
+// ClearSession godoc
+// @Summary 清空会话消息
+// @Description 清空指定会话的所有消息
+// @Tags Chat
+// @Produce json
+// @Param session_id path string true "会话 ID"
+// @Success 200 {object} models.Response
+// @Failure 400 {object} models.Response
+// @Failure 500 {object} models.Response
+// @Router /api/chat/session/{session_id} [delete]
 func (c *ChatController) ClearSession(ctx *web.Context) {
 	sessionID := ctx.Param("session_id")
 	if sessionID == "" {

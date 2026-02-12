@@ -1,9 +1,11 @@
 package routes
 
 import (
+	"net/http"
 	"time"
 
 	"iano_server/controllers"
+	"iano_server/docs"
 	"iano_server/pkg/config"
 	"iano_server/services"
 	web "iano_web"
@@ -19,10 +21,57 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *web.Engine {
 	engine.SetWriteTimeout(time.Duration(cfg.Server.WriteTimeout) * time.Second)
 	engine.SetGracefulShutdown(true)
 
-	// CORS 中间件必须最先注册，确保跨域请求能正确处理
 	engine.Use(webMiddleware.CORS())
 	engine.Use(webMiddleware.Recovery())
 	engine.Use(webMiddleware.Logger())
+
+	docs.SwaggerInfo.Title = "IANO Chat API"
+	docs.SwaggerInfo.Description = "IANO Chat 是一个智能对话系统，支持多 Agent、工具调用、流式响应等功能。"
+	docs.SwaggerInfo.Version = "1.0"
+	docs.SwaggerInfo.Host = "localhost:" + cfg.Server.Port
+	docs.SwaggerInfo.BasePath = "/"
+	docs.SwaggerInfo.Schemes = []string{"http", "https"}
+
+	engine.GET("/swagger/doc.json", func(c *web.Context) {
+		c.SetHeader("Content-Type", "application/json")
+		c.String(http.StatusOK, docs.SwaggerInfo.ReadDoc())
+	})
+
+	engine.GET("/swagger/*any", func(c *web.Context) {
+		html := `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>IANO Chat API Documentation</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+    <style>
+        html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
+        *, *:before, *:after { box-sizing: inherit; }
+        body { margin:0; padding:0; }
+    </style>
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {
+            const ui = SwaggerUIBundle({
+                url: "/swagger/doc.json",
+                dom_id: '#swagger-ui',
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                layout: "StandaloneLayout"
+            })
+        }
+    </script>
+</body>
+</html>`
+		c.SetHeader("Content-Type", "text/html; charset=utf-8")
+		c.String(http.StatusOK, html)
+	})
 
 	agentService := services.NewAgentService(db)
 	messageService := services.NewMessageService(db)
