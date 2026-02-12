@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -60,6 +61,8 @@ func (t *FileReadTool) InvokableRun(ctx context.Context, argumentsInJSON string,
 		Offset int    `json:"offset"`
 		Limit  int    `json:"limit"`
 	}
+
+	slog.Info("file_read 工具参数", "arguments", argumentsInJSON)
 
 	if err := json.Unmarshal([]byte(argumentsInJSON), &args); err != nil {
 		return "", fmt.Errorf("参数解析失败: %w", err)
@@ -174,6 +177,8 @@ func (t *FileWriteTool) InvokableRun(ctx context.Context, argumentsInJSON string
 		Mode    string `json:"mode"`
 	}
 
+	slog.Info("file_write 工具参数", "arguments", argumentsInJSON)
+
 	if err := json.Unmarshal([]byte(argumentsInJSON), &args); err != nil {
 		return "", fmt.Errorf("参数解析失败: %w", err)
 	}
@@ -269,6 +274,8 @@ func (t *FileListTool) InvokableRun(ctx context.Context, argumentsInJSON string,
 		Recursive bool   `json:"recursive"`
 		Pattern   string `json:"pattern"`
 	}
+
+	slog.Info("file_list 工具参数", "arguments", argumentsInJSON)
 
 	if err := json.Unmarshal([]byte(argumentsInJSON), &args); err != nil {
 		return "", fmt.Errorf("参数解析失败: %w", err)
@@ -441,6 +448,8 @@ func (t *FileDeleteTool) InvokableRun(ctx context.Context, argumentsInJSON strin
 		Recursive bool   `json:"recursive"`
 	}
 
+	slog.Info("file_delete 工具参数", "arguments", argumentsInJSON)
+
 	if err := json.Unmarshal([]byte(argumentsInJSON), &args); err != nil {
 		return "", fmt.Errorf("参数解析失败: %w", err)
 	}
@@ -534,6 +543,8 @@ func (t *FileInfoTool) InvokableRun(ctx context.Context, argumentsInJSON string,
 	var args struct {
 		Path string `json:"path"`
 	}
+
+	slog.Info("file_info 工具参数", "arguments", argumentsInJSON)
 
 	if err := json.Unmarshal([]byte(argumentsInJSON), &args); err != nil {
 		return "", fmt.Errorf("参数解析失败: %w", err)

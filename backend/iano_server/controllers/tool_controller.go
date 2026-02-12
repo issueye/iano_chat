@@ -8,14 +8,12 @@ import (
 )
 
 type ToolController struct {
-	toolService         *services.ToolService
-	agentManagerService *services.AgentManagerService
+	toolService *services.ToolService
 }
 
-func NewToolController(toolService *services.ToolService, agentManagerService *services.AgentManagerService) *ToolController {
+func NewToolController(toolService *services.ToolService) *ToolController {
 	return &ToolController{
-		toolService:         toolService,
-		agentManagerService: agentManagerService,
+		toolService: toolService,
 	}
 }
 
@@ -193,26 +191,6 @@ func (c *ToolController) Delete(ctx *web.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, models.Success(map[string]string{"message": "Tool deleted successfully"}))
-}
-
-func (c *ToolController) RegisterToAgent(ctx *web.Context) {
-	toolID := ctx.Param("id")
-	agentID := ctx.Query("agent_id")
-	if agentID == "" {
-		ctx.JSON(http.StatusBadRequest, models.Fail("agent_id is required"))
-		return
-	}
-
-	if err := c.agentManagerService.AddToolToAgent(ctx.Request.Context(), agentID, toolID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, models.Success(map[string]string{
-		"message":  "Tool registered to agent successfully",
-		"tool_id":  toolID,
-		"agent_id": agentID,
-	}))
 }
 
 func (c *ToolController) Test(ctx *web.Context) {

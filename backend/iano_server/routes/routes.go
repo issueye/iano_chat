@@ -1,8 +1,6 @@
 package routes
 
 import (
-	"context"
-	"log/slog"
 	"time"
 
 	"iano_server/controllers"
@@ -31,24 +29,14 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *web.Engine {
 	sessionService := services.NewSessionService(db)
 	toolService := services.NewToolService(db)
 	providerService := services.NewProviderService(db)
+	agentRuntimeService := services.NewAgentRuntimeService(db, agentService, providerService, toolService)
 
-	agentManagerService := services.NewAgentManagerService(
-		db,
-		agentService,
-		providerService,
-		toolService,
-	)
-
-	if err := agentManagerService.Initialize(context.Background()); err != nil {
-		slog.Error("Failed to initialize agent manager", "error", err)
-	}
-
-	agentController := controllers.NewAgentController(agentService, agentManagerService)
+	agentController := controllers.NewAgentController(agentService, agentRuntimeService)
 	messageController := controllers.NewMessageController(messageService)
 	sessionController := controllers.NewSessionController(sessionService)
-	toolController := controllers.NewToolController(toolService, agentManagerService)
+	toolController := controllers.NewToolController(toolService)
 	providerController := controllers.NewProviderController(providerService)
-	chatController := controllers.NewChatController(agentService, providerService, agentManagerService, messageService)
+	chatController := controllers.NewChatController(agentService, providerService, messageService)
 	baseController := &controllers.BaseController{}
 
 	engine.GET("/health", func(c *web.Context) {
@@ -63,18 +51,13 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *web.Engine {
 	engine.PUT("/api/tools/:id", toolController.Update)
 	engine.PUT("/api/tools/:id/config", toolController.UpdateConfig)
 	engine.DELETE("/api/tools/:id", toolController.Delete)
-	engine.POST("/api/tools/:id/register", toolController.RegisterToAgent)
 	engine.GET("/api/tools/:id/test", toolController.Test)
 
 	engine.POST("/api/agents", agentController.Create)
 	engine.GET("/api/agents", agentController.GetAll)
 	engine.GET("/api/agents/type", agentController.GetByType)
-	engine.GET("/api/agents/instances", agentController.ListInstances)
-	engine.GET("/api/agents/stats", agentController.GetStats)
 	engine.GET("/api/agents/:id", agentController.GetByID)
-	engine.GET("/api/agents/:id/info", agentController.GetInstanceInfo)
 	engine.PUT("/api/agents/:id", agentController.Update)
-	engine.POST("/api/agents/:id/reload", agentController.Reload)
 	engine.DELETE("/api/agents/:id", agentController.Delete)
 	engine.POST("/api/agents/:id/tools", agentController.AddTool)
 	engine.DELETE("/api/agents/:id/tools/:tool_name", agentController.RemoveTool)
@@ -105,11 +88,8 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *web.Engine {
 	engine.PUT("/api/providers/:id", providerController.Update)
 	engine.DELETE("/api/providers/:id", providerController.Delete)
 
-	engine.POST("/api/chat", chatController.Chat)
 	engine.POST("/api/chat/stream", chatController.StreamChat)
 	engine.DELETE("/api/chat/session/:session_id", chatController.ClearSession)
-	engine.GET("/api/chat/conversation", chatController.GetConversationInfo)
-	engine.GET("/api/chat/pool-stats", chatController.GetPoolStats)
 
 	return engine
 }

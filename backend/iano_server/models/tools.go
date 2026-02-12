@@ -44,18 +44,19 @@ type ToolDefinition struct {
 
 type Tool struct {
 	BaseModel
-	Name       string     `gorm:"size:255;not null" json:"name"`
-	Desc       string     `gorm:"type:text" json:"desc"`
-	Returns    string     `gorm:"type:text" json:"returns"`           // 返回值描述
-	Example    string     `gorm:"type:text" json:"example,omitempty"` // 使用示例
-	Type       ToolType   `gorm:"size:20" json:"type"`
-	Status     ToolStatus `gorm:"size:20;default:'enabled'" json:"status"`
-	CallCount  int64      `json:"call_count" gorm:"default:0"`  // 调用次数
-	ErrorCount int64      `json:"error_count" gorm:"default:0"` // 错误次数
-	Config     string     `json:"config" gorm:"type:text"`      // 工具配置（JSON）
-	Parameters string     `json:"parameters" gorm:"type:text"`  // 参数定义（JSON）
-	Version    string     `json:"version" gorm:"default:1.0.0"` // 版本
-	Author     string     `json:"author"`                       // 作者
+	Name          string     `gorm:"size:255;not null" json:"name"`
+	Desc          string     `gorm:"type:text" json:"desc"`
+	Returns       string     `gorm:"type:text" json:"returns"`           // 返回值描述
+	Example       string     `gorm:"type:text" json:"example,omitempty"` // 使用示例
+	Type          ToolType   `gorm:"size:20" json:"type"`
+	Status        ToolStatus `gorm:"size:20;default:'enabled'" json:"status"`
+	ScriptContent string     `gorm:"type:text" json:"script_content,omitempty"` // 脚本内容（仅对脚本工具）
+	CallCount     int64      `json:"call_count" gorm:"default:0"`               // 调用次数
+	ErrorCount    int64      `json:"error_count" gorm:"default:0"`              // 错误次数
+	Config        string     `json:"config" gorm:"type:text"`                   // 工具配置（JSON）
+	Parameters    string     `json:"parameters" gorm:"type:text"`               // 参数定义（JSON）
+	Version       string     `json:"version" gorm:"default:1.0.0"`              // 版本
+	Author        string     `json:"author"`                                    // 作者
 }
 
 func (table *Tool) TableName() string {

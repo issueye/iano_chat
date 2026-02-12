@@ -82,16 +82,26 @@
             <div
               v-for="tool in messageContent.tool_calls"
               :key="tool.id"
-              class="bg-muted rounded-lg p-3 text-xs"
+              class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-xs overflow-hidden"
             >
-              <div class="flex items-center gap-2 font-medium">
-                <Wrench class="w-4 h-4 text-foreground" />
-                {{ tool.function.name }}
+              <!-- 工具名称和图标 -->
+              <div class="flex items-center gap-2 font-medium text-blue-700 dark:text-blue-300">
+                <div class="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                  <Wrench class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <span class="capitalize">{{ formatToolName(tool.function.name) }}</span>
               </div>
-              <div
-                class="mt-2 opacity-70 font-mono text-[10px] bg-black/5 rounded p-2 truncate"
-              >
-                {{ tool.function.arguments }}
+              
+              <!-- 工具参数 -->
+              <div class="mt-2 space-y-1">
+                <div
+                  v-for="(value, key) in parseToolArguments(tool.function.arguments)"
+                  :key="key"
+                  class="flex items-start gap-2 text-[11px]"
+                >
+                  <span class="text-blue-600 dark:text-blue-400 font-medium shrink-0">{{ key }}:</span>
+                  <span class="text-gray-600 dark:text-gray-400 break-all font-mono bg-white/50 dark:bg-black/20 rounded px-1.5 py-0.5">{{ formatParamValue(value) }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -217,6 +227,92 @@ function formatTime(isoString) {
 function copyMessage() {
   const text = messageContent.value.text || ""
   navigator.clipboard.writeText(text)
+}
+
+/**
+ * 格式化工具名称显示
+ * 将下划线分隔的名称转换为更友好的显示
+ * @param name - 工具名称
+ * @returns 格式化后的名称
+ */
+function formatToolName(name) {
+  if (!name) return '未知工具'
+  
+  // 工具名称映射表
+  const toolNameMap = {
+    'file_write': '写入文件',
+    'file_read': '读取文件',
+    'file_list': '列出文件',
+    'file_delete': '删除文件',
+    'file_info': '文件信息',
+    'grep_search': '搜索内容',
+    'grep_replace': '替换内容',
+    'command_execute': '执行命令',
+    'shell_execute': '执行 Shell',
+    'web_search': '网络搜索',
+    'http_request': 'HTTP 请求',
+    'archive_create': '创建压缩包',
+    'archive_extract': '解压文件',
+    'process_list': '进程列表',
+    'env_get': '获取环境变量',
+    'env_set': '设置环境变量',
+    'system_info': '系统信息',
+    'ping': '网络 Ping',
+    'dns_lookup': 'DNS 查询',
+    'http_headers': 'HTTP 头信息'
+  }
+  
+  return toolNameMap[name] || name.replace(/_/g, ' ')
+}
+
+/**
+ * 解析工具参数
+ * 将 JSON 字符串解析为对象
+ * @param args - JSON 格式的参数字符串
+ * @returns 解析后的参数对象
+ */
+function parseToolArguments(args) {
+  if (!args) return {}
+  try {
+    const parsed = JSON.parse(args)
+    return parsed || {}
+  } catch {
+    // 如果解析失败，尝试处理转义的字符串
+    try {
+      const unescaped = args
+        .replace(/\\n/g, '\n')
+        .replace(/\\t/g, '\t')
+        .replace(/\\"/g, '"')
+      return JSON.parse(unescaped) || {}
+    } catch {
+      return { '参数': args }
+    }
+  }
+}
+
+/**
+ * 格式化参数值显示
+ * 对长文本进行截断处理
+ * @param value - 参数值
+ * @returns 格式化后的值
+ */
+function formatParamValue(value) {
+  if (value === null || value === undefined) return ''
+  
+  const str = String(value)
+  
+  // 如果内容包含换行符，只显示第一行并添加省略号
+  if (str.includes('\n')) {
+    const firstLine = str.split('\n')[0].trim()
+    return firstLine.length > 50 ? firstLine.substring(0, 50) + '...' : firstLine + '...'
+  }
+  
+  // 如果内容太长，截断显示
+  if (str.length > 100) {
+    return str.substring(0, 100) + '...'
+  }
+  
+  return str
 }
 </script>
 

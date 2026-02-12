@@ -33,14 +33,16 @@ const (
 	FeedbackRatingDislike FeedbackRating = "dislike"
 )
 
+type Function struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
+}
+
 // ToolCall 工具调用
 type ToolCall struct {
-	ID       string `json:"id"`
-	Type     string `json:"type"`
-	Function struct {
-		Name      string `json:"name"`
-		Arguments string `json:"arguments"`
-	} `json:"function"`
+	ID       string   `json:"id"`
+	Type     string   `json:"type"`
+	Function Function `json:"function"`
 }
 
 // Attachment 附件

@@ -10,10 +10,10 @@ import (
 )
 
 type Registry interface {
-	Register(name string, t tool.BaseTool) error
+	Register(name string, t tool.InvokableTool) error
 	Unregister(name string) error
-	Get(name string) (tool.BaseTool, bool)
-	List() []tool.BaseTool
+	Get(name string) (tool.InvokableTool, bool)
+	List() []tool.InvokableTool
 	Names() []string
 	Clear()
 	Clone() Registry
@@ -21,19 +21,19 @@ type Registry interface {
 }
 
 type defaultRegistry struct {
-	tools map[string]tool.BaseTool
+	tools map[string]tool.InvokableTool
 	mu    sync.RWMutex
 }
 
 func NewRegistry() Registry {
 	return &defaultRegistry{
-		tools: make(map[string]tool.BaseTool),
+		tools: make(map[string]tool.InvokableTool),
 	}
 }
 
-func NewRegistryWithTools(toolsMap map[string]tool.BaseTool) Registry {
+func NewRegistryWithTools(toolsMap map[string]tool.InvokableTool) Registry {
 	r := &defaultRegistry{
-		tools: make(map[string]tool.BaseTool),
+		tools: make(map[string]tool.InvokableTool),
 	}
 	for name, t := range toolsMap {
 		r.tools[name] = t
@@ -41,7 +41,7 @@ func NewRegistryWithTools(toolsMap map[string]tool.BaseTool) Registry {
 	return r
 }
 
-func (r *defaultRegistry) Register(name string, t tool.BaseTool) error {
+func (r *defaultRegistry) Register(name string, t tool.InvokableTool) error {
 	if name == "" {
 		return fmt.Errorf("工具名称不能为空")
 	}
@@ -72,7 +72,7 @@ func (r *defaultRegistry) Unregister(name string) error {
 	return nil
 }
 
-func (r *defaultRegistry) Get(name string) (tool.BaseTool, bool) {
+func (r *defaultRegistry) Get(name string) (tool.InvokableTool, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -80,11 +80,11 @@ func (r *defaultRegistry) Get(name string) (tool.BaseTool, bool) {
 	return t, exists
 }
 
-func (r *defaultRegistry) List() []tool.BaseTool {
+func (r *defaultRegistry) List() []tool.InvokableTool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	list := make([]tool.BaseTool, 0, len(r.tools))
+	list := make([]tool.InvokableTool, 0, len(r.tools))
 	for _, t := range r.tools {
 		list = append(list, t)
 	}
@@ -106,7 +106,7 @@ func (r *defaultRegistry) Clear() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.tools = make(map[string]tool.BaseTool)
+	r.tools = make(map[string]tool.InvokableTool)
 }
 
 func (r *defaultRegistry) Clone() Registry {
@@ -114,7 +114,7 @@ func (r *defaultRegistry) Clone() Registry {
 	defer r.mu.RUnlock()
 
 	newRegistry := &defaultRegistry{
-		tools: make(map[string]tool.BaseTool),
+		tools: make(map[string]tool.InvokableTool),
 	}
 	for name, t := range r.tools {
 		newRegistry.tools[name] = t
@@ -259,7 +259,7 @@ func RegisterBuiltinTools(ctx context.Context) error {
 
 type ScopedRegistry struct {
 	parent  Registry
-	tools   map[string]tool.BaseTool
+	tools   map[string]tool.InvokableTool
 	mu      sync.RWMutex
 	allowed map[string]bool
 }
@@ -271,12 +271,12 @@ func NewScopedRegistry(parent Registry, allowedTools []string) *ScopedRegistry {
 	}
 	return &ScopedRegistry{
 		parent:  parent,
-		tools:   make(map[string]tool.BaseTool),
+		tools:   make(map[string]tool.InvokableTool),
 		allowed: allowed,
 	}
 }
 
-func (r *ScopedRegistry) Register(name string, t tool.BaseTool) error {
+func (r *ScopedRegistry) Register(name string, t tool.InvokableTool) error {
 	if name == "" {
 		return fmt.Errorf("工具名称不能为空")
 	}
@@ -312,7 +312,7 @@ func (r *ScopedRegistry) Unregister(name string) error {
 	return nil
 }
 
-func (r *ScopedRegistry) Get(name string) (tool.BaseTool, bool) {
+func (r *ScopedRegistry) Get(name string) (tool.InvokableTool, bool) {
 	r.mu.RLock()
 	if t, exists := r.tools[name]; exists {
 		r.mu.RUnlock()
@@ -335,10 +335,10 @@ func (r *ScopedRegistry) isAllowed(name string) bool {
 	return r.allowed[name]
 }
 
-func (r *ScopedRegistry) List() []tool.BaseTool {
+func (r *ScopedRegistry) List() []tool.InvokableTool {
 	r.mu.RLock()
 	seen := make(map[string]bool)
-	list := make([]tool.BaseTool, 0)
+	list := make([]tool.InvokableTool, 0)
 
 	for name, t := range r.tools {
 		if !seen[name] {
@@ -389,7 +389,7 @@ func (r *ScopedRegistry) Names() []string {
 func (r *ScopedRegistry) Clear() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.tools = make(map[string]tool.BaseTool)
+	r.tools = make(map[string]tool.InvokableTool)
 }
 
 func (r *ScopedRegistry) Clone() Registry {
@@ -398,7 +398,7 @@ func (r *ScopedRegistry) Clone() Registry {
 
 	newRegistry := &ScopedRegistry{
 		parent:  r.parent,
-		tools:   make(map[string]tool.BaseTool),
+		tools:   make(map[string]tool.InvokableTool),
 		allowed: make(map[string]bool),
 	}
 	for name, t := range r.tools {

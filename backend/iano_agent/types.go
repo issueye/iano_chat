@@ -11,7 +11,7 @@ type ToolCallInfo struct {
 	Arguments string `json:"arguments"`
 }
 
-type MessageCallback func(content string, isToolCall bool, toolCalls []ToolCallInfo)
+type MessageCallback func(content string, isToolCall bool, toolCalls *ToolCallInfo)
 
 type TokenUsage struct {
 	TotalTokens      int64
@@ -20,13 +20,6 @@ type TokenUsage struct {
 	SummaryTokens    int64
 	SavedTokens      int64
 	LastUpdated      time.Time
-}
-
-type SummaryConfig struct {
-	KeepRecentRounds int
-	TriggerThreshold int
-	MaxSummaryTokens int
-	Enabled          bool
 }
 
 type Tool struct {

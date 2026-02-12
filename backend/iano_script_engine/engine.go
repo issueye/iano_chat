@@ -11,27 +11,23 @@ import (
 )
 
 type Engine struct {
-	mu         sync.RWMutex
-	timeout    time.Duration
-	maxScripts int
+	mu      sync.RWMutex
+	timeout time.Duration
 }
 
 type Config struct {
-	Timeout    time.Duration
-	MaxScripts int
+	Timeout time.Duration
 }
 
 func NewEngine(cfg *Config) *Engine {
 	if cfg == nil {
 		cfg = &Config{
-			Timeout:    30 * time.Second,
-			MaxScripts: 100,
+			Timeout: 30 * time.Second,
 		}
 	}
 
 	return &Engine{
-		timeout:    cfg.Timeout,
-		maxScripts: cfg.MaxScripts,
+		timeout: cfg.Timeout,
 	}
 }
 

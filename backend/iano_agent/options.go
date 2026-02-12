@@ -14,12 +14,6 @@ func WithCallback(callback MessageCallback) Option {
 	}
 }
 
-func WithSummaryConfig(cfg SummaryConfig) Option {
-	return func(c *Config) {
-		c.Summary = cfg
-	}
-}
-
 func WithMaxRounds(maxRounds int) Option {
 	return func(c *Config) {
 		if maxRounds > 0 {
@@ -31,18 +25,6 @@ func WithMaxRounds(maxRounds int) Option {
 func WithAllowedTools(allowedTools []string) Option {
 	return func(c *Config) {
 		c.AllowedTools = allowedTools
-	}
-}
-
-func WithSessionID(sessionID string) Option {
-	return func(c *Config) {
-		c.SessionID = sessionID
-	}
-}
-
-func WithAgentID(agentID string) Option {
-	return func(c *Config) {
-		c.AgentID = agentID
 	}
 }
 
