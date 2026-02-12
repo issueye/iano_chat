@@ -17,6 +17,12 @@ export const useMessageStore = defineStore('message', () => {
   const error = ref(null)
   /** 用于取消请求的 AbortController */
   const abortController = ref(null)
+  /** 重连配置 */
+  const reconnectConfig = {
+    maxRetries: 3,
+    retryDelay: 1000,
+    retryCount: 0
+  }
 
   /**
    * 当前会话的消息列表
@@ -91,6 +97,7 @@ export const useMessageStore = defineStore('message', () => {
       abortController.value.abort()
       abortController.value = null
     }
+    reconnectConfig.retryCount = reconnectConfig.maxRetries
     setLoading(false)
   }
 
@@ -136,6 +143,7 @@ export const useMessageStore = defineStore('message', () => {
     addMessage(userMessage)
     setLoading(true)
     clearError()
+    reconnectConfig.retryCount = 0
 
     const assistantMessageId = Date.now().toString() + '_assistant'
     const assistantMessage = {
@@ -147,28 +155,49 @@ export const useMessageStore = defineStore('message', () => {
     }
     addMessage(assistantMessage)
 
+    await streamChat(content, directory, assistantMessageId, sessionStore.currentSessionId, agentStore.currentAgentId)
+  }
+
+  /**
+   * 流式聊天核心逻辑（支持重连）
+   */
+  async function streamChat(content, directory, assistantMessageId, sessionId, agentId) {
+    let accumulatedContent = ''
+    let accumulatedToolCalls = []
+    let contentBlocks = []
+
+    const existingMsg = messages.value.find(m => m.id === assistantMessageId)
+    if (existingMsg) {
+      try {
+        const parsed = JSON.parse(existingMsg.content)
+        accumulatedContent = parsed.text || ''
+        accumulatedToolCalls = parsed.tool_calls || []
+        contentBlocks = parsed.blocks || []
+      } catch (e) {}
+    }
+
     try {
+      abortController.value = new AbortController()
+      
       const streamResponse = await fetch(`${API_BASE}/chat/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          session_id: String(sessionStore.currentSessionId),
-          agent_id: agentStore.currentAgentId,
+          session_id: String(sessionId),
+          agent_id: agentId,
           message: content,
           work_dir: directory || undefined
-        })
+        }),
+        signal: abortController.value.signal
       })
 
       if (!streamResponse.ok) {
-        throw new Error(`HTTP error! status: ${streamResponse.status}`)
+        const errorText = await streamResponse.text()
+        throw new Error(`HTTP ${streamResponse.status}: ${errorText}`)
       }
 
       const reader = streamResponse.body.getReader()
       const decoder = new TextDecoder()
-      let accumulatedContent = ''
-      let accumulatedToolCalls = []
-      let contentBlocks = []
-
       let currentEventType = 'content_block'
 
       while (true) {
@@ -219,6 +248,8 @@ export const useMessageStore = defineStore('message', () => {
               } else if (currentEventType === 'error') {
                 setError(eventData.error)
                 updateMessage(assistantMessageId, { status: 'failed' })
+                setLoading(false)
+                return
               }
             } catch (e) {
               // 忽略不完整 JSON 的解析错误
@@ -230,11 +261,32 @@ export const useMessageStore = defineStore('message', () => {
       }
 
       updateMessage(assistantMessageId, { status: 'completed' })
+      setLoading(false)
 
     } catch (err) {
+      if (err.name === 'AbortError') {
+        updateMessage(assistantMessageId, { status: 'failed' })
+        setLoading(false)
+        return
+      }
+
+      const isNetworkError = err.message.includes('Failed to fetch') || 
+                             err.message.includes('NetworkError') ||
+                             err.message.includes('ERR_NETWORK') ||
+                             err.message.includes('ECONNRESET') ||
+                             err.message.includes('ECONNREFUSED')
+
+      if (isNetworkError && reconnectConfig.retryCount < reconnectConfig.maxRetries) {
+        reconnectConfig.retryCount++
+        setError(`连接断开，正在重连 (${reconnectConfig.retryCount}/${reconnectConfig.maxRetries})...`)
+        
+        await new Promise(resolve => setTimeout(resolve, reconnectConfig.retryDelay * reconnectConfig.retryCount))
+        
+        return streamChat(content, directory, assistantMessageId, sessionId, agentId)
+      }
+
       setError(err.message)
       updateMessage(assistantMessageId, { status: 'failed' })
-    } finally {
       setLoading(false)
     }
   }

@@ -36,6 +36,14 @@ var (
 		"echo", "pwd", "whoami", "date", "uname",
 		"git", "npm", "yarn", "pip", "python", "python3", "node",
 		"go", "cargo", "rustc",
+		"mkdir", "rmdir", "touch", "rm", "cp", "mv", "ln",
+		"chmod", "chown",
+		"tree", "du", "df",
+		"curl", "wget",
+		"make", "cmake",
+		"docker", "kubectl",
+		"env", "export", "set",
+		"type", "which", "where",
 	}
 )
 
