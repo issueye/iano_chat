@@ -351,6 +351,38 @@ export const useMessageStore = defineStore('message', () => {
     }
   }
 
+  /**
+   * 发送消息反馈
+   * @param messageId - 消息 ID
+   * @param rating - 评分 ('like' 或 'dislike')
+   * @param comment - 可选评论
+   */
+  async function sendFeedback(messageId, rating, comment = '') {
+    try {
+      const response = await fetch(`${API_BASE}/messages/${messageId}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rating,
+          comment
+        })
+      })
+      const data = await response.json()
+      if (data.code === 200 && data.data) {
+        updateMessage(messageId, {
+          feedback_rating: data.data.feedback_rating,
+          feedback_comment: data.data.feedback_comment,
+          feedback_at: data.data.feedback_at
+        })
+        return true
+      }
+      return false
+    } catch (err) {
+      console.error('Failed to send feedback:', err)
+      return false
+    }
+  }
+
   return {
     messages,
     isLoading,
@@ -366,5 +398,6 @@ export const useMessageStore = defineStore('message', () => {
     fetchMessagesBySession,
     sendMessage,
     sendMessageNonStreaming,
+    sendFeedback,
   }
 })

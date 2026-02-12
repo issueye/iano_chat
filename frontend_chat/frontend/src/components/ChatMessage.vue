@@ -161,21 +161,29 @@
               </Button>
             </Tooltip>
 
-            <Tooltip content="点赞">
+            <Tooltip :content="message.feedback_rating === 'like' ? '已点赞' : '点赞'">
               <Button
                 variant="ghost"
                 size="icon"
-                class="h-7 w-7 hover:bg-muted"
+                :class="[
+                  'h-7 w-7 hover:bg-muted',
+                  message.feedback_rating === 'like' ? 'text-green-500 hover:text-green-600' : ''
+                ]"
+                @click="handleLike"
               >
                 <ThumbsUp class="h-3.5 w-3.5" />
               </Button>
             </Tooltip>
 
-            <Tooltip content="点踩">
+            <Tooltip :content="message.feedback_rating === 'dislike' ? '已点踩' : '点踩'">
               <Button
                 variant="ghost"
                 size="icon"
-                class="h-7 w-7 hover:bg-muted"
+                :class="[
+                  'h-7 w-7 hover:bg-muted',
+                  message.feedback_rating === 'dislike' ? 'text-red-500 hover:text-red-600' : ''
+                ]"
+                @click="handleDislike"
               >
                 <ThumbsDown class="h-3.5 w-3.5" />
               </Button>
@@ -204,8 +212,14 @@ import {
   ThumbsDown,
   AlertCircle,
   Wrench,
+  Check,
 } from "lucide-vue-next"
 import MarkdownRenderer from "./MarkdownRenderer.vue"
+import { useToast } from "@/composables/useToast"
+import { useMessageStore } from "@/stores/message"
+
+const toast = useToast()
+const messageStore = useMessageStore()
 
 /**
  * 组件属性定义
@@ -252,9 +266,40 @@ function formatTime(isoString) {
 /**
  * 复制消息内容到剪贴板
  */
-function copyMessage() {
+async function copyMessage() {
   const text = messageContent.value.text || ""
-  navigator.clipboard.writeText(text)
+  try {
+    await navigator.clipboard.writeText(text)
+    toast.success("已复制到剪贴板")
+  } catch (err) {
+    toast.error("复制失败")
+  }
+}
+
+/**
+ * 处理点赞
+ */
+async function handleLike() {
+  if (props.message.feedback_rating === "like") {
+    return
+  }
+  const success = await messageStore.sendFeedback(props.message.id, "like")
+  if (success) {
+    toast.success("感谢您的反馈")
+  }
+}
+
+/**
+ * 处理点踩
+ */
+async function handleDislike() {
+  if (props.message.feedback_rating === "dislike") {
+    return
+  }
+  const success = await messageStore.sendFeedback(props.message.id, "dislike")
+  if (success) {
+    toast.success("感谢您的反馈，我们会持续改进")
+  }
 }
 
 /**
