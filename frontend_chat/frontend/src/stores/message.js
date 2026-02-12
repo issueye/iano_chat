@@ -168,6 +168,9 @@ export const useMessageStore = defineStore('message', () => {
       let accumulatedContent = ''
       let accumulatedToolCalls = []
 
+      // 用于跟踪当前事件类型
+      let currentEventType = 'message'
+
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
@@ -176,40 +179,55 @@ export const useMessageStore = defineStore('message', () => {
         const lines = chunk.split('\n')
 
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
+          if (line.startsWith('event: ')) {
+            // 记录当前事件类型
+            currentEventType = line.slice(7).trim()
+          } else if (line.startsWith('data: ')) {
             try {
               const eventData = JSON.parse(line.slice(6))
-              if (eventData.content) {
-                accumulatedContent += eventData.content
-              }
-              if (eventData.id && eventData.name) {
-                accumulatedToolCalls.push({
-                  id: eventData.id,
-                  type: 'function',
-                  function: {
-                    name: eventData.name,
-                    arguments: eventData.arguments
-                  }
+
+              // 根据事件类型处理数据
+              if (currentEventType === 'message') {
+                if (eventData.content) {
+                  accumulatedContent += eventData.content
+                }
+                if (eventData.error) {
+                  setError(eventData.error)
+                  updateMessage(assistantMessageId, { status: 'failed' })
+                }
+                // 更新消息显示
+                updateMessage(assistantMessageId, {
+                  content: JSON.stringify({
+                    text: accumulatedContent,
+                    tool_calls: accumulatedToolCalls
+                  })
                 })
-              }
-              updateMessage(assistantMessageId, {
-                content: JSON.stringify({
-                  text: accumulatedContent,
-                  tool_calls: accumulatedToolCalls
-                })
-              })
-              if (eventData.error) {
-                setError(eventData.error)
-                updateMessage(assistantMessageId, { status: 'failed' })
+              } else if (currentEventType === 'tool_call') {
+                // 处理工具调用事件
+                if (eventData.id && eventData.name) {
+                  accumulatedToolCalls.push({
+                    id: eventData.id,
+                    type: 'function',
+                    function: {
+                      name: eventData.name,
+                      arguments: eventData.arguments
+                    }
+                  })
+                  // 更新消息显示工具调用
+                  updateMessage(assistantMessageId, {
+                    content: JSON.stringify({
+                      text: accumulatedContent,
+                      tool_calls: accumulatedToolCalls
+                    })
+                  })
+                }
               }
             } catch (e) {
               // 忽略不完整 JSON 的解析错误
             }
-          } else if (line.startsWith('event: ')) {
-            const eventType = line.slice(7)
-            if (eventType === 'done') {
-              updateMessage(assistantMessageId, { status: 'completed' })
-            }
+          } else if (line.trim() === '') {
+            // 空行表示事件结束，重置事件类型
+            currentEventType = 'message'
           }
         }
       }

@@ -96,7 +96,20 @@ func (a *Agent) Chat(ctx context.Context, userInput string) (string, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	currentRound.AssistantMessage = schema.AssistantMessage(fullResponse, nil)
+	// 构建工具调用信息
+	var toolCalls []schema.ToolCall
+	for _, tc := range allToolCalls {
+		toolCalls = append(toolCalls, schema.ToolCall{
+			ID:   tc.ID,
+			Type: "function",
+			Function: schema.FunctionCall{
+				Name:      tc.Name,
+				Arguments: tc.Arguments,
+			},
+		})
+	}
+
+	currentRound.AssistantMessage = schema.AssistantMessage(fullResponse, toolCalls)
 	currentRound.TokenCount += estimateTokens(fullResponse)
 	a.conversation.RecentRounds = append(a.conversation.RecentRounds, currentRound)
 
