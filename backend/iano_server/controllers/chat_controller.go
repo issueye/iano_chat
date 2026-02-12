@@ -24,11 +24,13 @@ func NewChatController(
 	agentService *services.AgentService,
 	providerService *services.ProviderService,
 	messageService *services.MessageService,
+	agentRuntimeService *services.AgentRuntimeService,
 ) *ChatController {
 	return &ChatController{
-		agentService:    agentService,
-		providerService: providerService,
-		messageService:  messageService,
+		agentService:        agentService,
+		providerService:     providerService,
+		messageService:      messageService,
+		agentRuntimeService: agentRuntimeService,
 	}
 }
 
