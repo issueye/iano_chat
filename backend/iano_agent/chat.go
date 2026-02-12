@@ -55,60 +55,68 @@ func (a *Agent) Loop(ctx context.Context, messages []*schema.Message, cb Message
 	}
 
 	fullResponse := ""
+	maxIterations := 30
+	iteration := 0
 
-	// 构建流式对话选项
-	opts := a.MakeStreamOpts()
-	msgReader, err := a.ra.Stream(ctx, loopMessage, opts...)
-	if err != nil {
-		return "", fmt.Errorf("流式对话失败: %w", err)
-	}
+	for iteration < maxIterations {
+		iteration++
 
-	for {
-		msg, err := msgReader.Recv()
+		opts := a.MakeStreamOpts()
+		msgReader, err := a.ra.Stream(ctx, loopMessage, opts...)
 		if err != nil {
-			if errors.Is(err, io.EOF) {
-				slog.Info("流式对话结束")
-				break
-			}
-			slog.Error("读取消息失败", slog.String("error", err.Error()))
-			return "", fmt.Errorf("流式对话接收消息失败: %w", err)
+			return "", fmt.Errorf("流式对话失败: %w", err)
 		}
 
-		// 处理消息内容
-		if msg.Content != "" {
-			fullResponse += msg.Content
+		hasToolCalls := false
 
-			// 添加到对话历史
-			loopMessage = append(loopMessage, &schema.Message{
-				Role:    msg.Role,
-				Content: msg.Content,
-			})
-
-			// 调用回调函数
-			if cb != nil {
-				cb(msg.Content, len(msg.ToolCalls) > 0, nil)
-			}
-		}
-
-		// 处理工具
-		if len(msg.ToolCalls) > 0 {
-			for _, tc := range msg.ToolCalls {
-				// 调用工具
-				toolResult, err := a.invokeTool(ctx, tc.Function.Name, tc.Function.Arguments)
-				if err != nil {
-					slog.Error("工具调用失败", "id", tc.ID, "name", tc.Function.Name, "arguments", tc.Function.Arguments, "error", err.Error())
-					return "", fmt.Errorf("工具调用失败: %w", err)
+		for {
+			msg, err := msgReader.Recv()
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					slog.Info("流式对话结束", "iteration", iteration)
+					break
 				}
-				slog.Info("工具调用成功", "id", tc.ID, "name", tc.Function.Name, "arguments", tc.Function.Arguments, "result", toolResult)
+				slog.Error("读取消息失败", slog.String("error", err.Error()))
+				return "", fmt.Errorf("流式对话接收消息失败: %w", err)
+			}
 
-				// 将工具调用结果添加到对话历史
+			if msg.Content != "" {
+				fullResponse += msg.Content
+
 				loopMessage = append(loopMessage, &schema.Message{
-					Role:    schema.Tool,
-					Content: fmt.Sprintf("工具调用结果: %s", toolResult),
+					Role:    msg.Role,
+					Content: msg.Content,
 				})
-				fullResponse += fmt.Sprintf("\n工具调用结果: %s", toolResult)
+
+				if cb != nil {
+					cb(msg.Content, len(msg.ToolCalls) > 0, nil)
+				}
+			}
+
+			if len(msg.ToolCalls) > 0 {
+				hasToolCalls = true
+				for _, tc := range msg.ToolCalls {
+					toolResult, err := a.invokeTool(ctx, tc.Function.Name, tc.Function.Arguments)
+					if err != nil {
+						slog.Error("工具调用失败", "id", tc.ID, "name", tc.Function.Name, "arguments", tc.Function.Arguments, "error", err.Error())
+						return "", fmt.Errorf("工具调用失败: %w", err)
+					}
+					slog.Info("工具调用成功", "id", tc.ID, "name", tc.Function.Name, "arguments", tc.Function.Arguments, "result", toolResult)
+
+					loopMessage = append(loopMessage, &schema.Message{
+						Role:    schema.Tool,
+						Content: fmt.Sprintf("工具调用结果: %s", toolResult),
+					})
+					fullResponse += fmt.Sprintf("\n工具调用结果: %s", toolResult)
+				}
 			}
 		}
+
+		if !hasToolCalls {
+			break
+		}
+
+		slog.Info("工具调用完成，继续对话循环", "iteration", iteration)
 	}
 
 	return fullResponse, nil
