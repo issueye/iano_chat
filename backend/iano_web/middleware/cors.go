@@ -40,7 +40,17 @@ func CORSWithConfig(config CORSConfig) web.HandlerFunc {
 		// 检查允许的 Origin
 		allowOrigin := ""
 		for _, o := range config.AllowOrigins {
-			if o == "*" || o == origin {
+			if o == "*" {
+				// 如果允许所有来源，且有具体的 Origin 头，则返回该 Origin
+				// 这支持 Wails 等桌面应用的 wails:// 协议
+				if origin != "" {
+					allowOrigin = origin
+				} else {
+					allowOrigin = "*"
+				}
+				break
+			}
+			if o == origin {
 				allowOrigin = o
 				break
 			}

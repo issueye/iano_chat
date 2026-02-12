@@ -1,5 +1,7 @@
 <template>
-  <XMarkdown :markdown="content" :themes="{ light: 'andromeeda', dark: 'material-theme-darker' }" :codeXProps="{ enableCodeLineNumber: true }" />
+  <div class="markdown-content">
+    <XMarkdown :markdown="content" :themes="{ light: 'andromeeda', dark: 'material-theme-darker' }" :codeXProps="{ enableCodeLineNumber: true }" />
+  </div>
 </template>
 
 <script setup>

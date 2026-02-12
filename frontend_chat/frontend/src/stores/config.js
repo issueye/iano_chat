@@ -3,11 +3,34 @@
  * 提供应用全局配置和 API 基础地址管理
  */
 
-/** API 基础地址 */
-export const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8080/api'
+/**
+ * 判断是否在 Wails 环境中运行
+ * Wails 生产环境使用 wails:// 协议
+ */
+const isWails = typeof window !== 'undefined' && window.runtime !== undefined
 
-/** WebSocket 基础地址 */
-export const WS_BASE = import.meta.env.VITE_WS_BASE || 'ws://127.0.0.1:8080/ws'
+/**
+ * 判断是否在开发环境
+ */
+const isDev = import.meta.env.DEV
+
+/**
+ * API 基础地址
+ * - 开发环境：使用相对路径 /api，通过 Vite 代理转发
+ * - Wails 生产环境：使用完整地址
+ */
+export const API_BASE = isDev && !isWails
+  ? '/api'  // Vite 开发服务器代理
+  : (import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8080/api')
+
+/**
+ * WebSocket 基础地址
+ * - 开发环境：使用相对路径 /ws，通过 Vite 代理转发
+ * - Wails 生产环境：使用完整地址
+ */
+export const WS_BASE = isDev && !isWails
+  ? '/ws'  // Vite 开发服务器代理
+  : (import.meta.env.VITE_WS_BASE || 'ws://127.0.0.1:8080/ws')
 
 /**
  * 构建完整的 API URL

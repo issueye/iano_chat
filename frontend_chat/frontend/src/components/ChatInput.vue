@@ -34,15 +34,15 @@
             :disabled="isLoading"
             @update:model-value="emit('update:modelValue', $event)"
           >
-            <SelectTrigger class="h-8 w-auto min-w-[140px] border-0 bg-transparent hover:bg-muted px-2 gap-1.5">
+            <SelectTrigger class="h-8 w-auto min-w-[140px] border border-border/80 bg-muted/40 hover:bg-muted/80 px-2 gap-1.5 rounded-lg shadow-sm">
               <div class="flex items-center gap-2">
                 <div
-                  class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
-                  :class="currentAgent?.color || 'bg-muted text-muted-foreground'"
+                  class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shadow-sm"
+                  :class="currentAgent?.color || 'bg-primary text-primary-foreground'"
                 >
                   {{ currentAgent?.name?.[0]?.toUpperCase() || 'A' }}
                 </div>
-                <span class="text-sm text-foreground truncate max-w-[100px]">
+                <span class="text-sm font-medium text-foreground truncate max-w-[100px]">
                   {{ currentAgent?.name || '选择 Agent' }}
                 </span>
               </div>
