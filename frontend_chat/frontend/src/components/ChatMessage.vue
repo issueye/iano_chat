@@ -150,10 +150,14 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Tooltip } from "@/components/ui/tooltip";
+/**
+ * ChatMessage 组件 - 聊天消息显示
+ * 显示单条消息，包括用户消息和 AI 助手消息
+ */
+import { computed } from "vue"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Tooltip } from "@/components/ui/tooltip"
 import {
   User,
   Bot,
@@ -162,40 +166,57 @@ import {
   ThumbsDown,
   AlertCircle,
   Wrench,
-} from "lucide-vue-next";
-import MarkdownRenderer from "./MarkdownRenderer.vue";
+} from "lucide-vue-next"
+import MarkdownRenderer from "./MarkdownRenderer.vue"
 
+/**
+ * 组件属性定义
+ */
 const props = defineProps({
+  /** 消息对象 */
   message: {
     type: Object,
     required: true,
   },
+  /** 是否为最后一条消息 */
   isLast: {
     type: Boolean,
     default: false,
   },
-});
+})
 
+/**
+ * 解析消息内容
+ * 将 JSON 格式的消息内容解析为对象
+ */
 const messageContent = computed(() => {
   try {
-    return JSON.parse(props.message.content) || {};
+    return JSON.parse(props.message.content) || {}
   } catch {
-    return { text: props.message.content };
+    return { text: props.message.content }
   }
-});
+})
 
+/**
+ * 格式化时间显示
+ * @param isoString - ISO 格式的时间字符串
+ * @returns 格式化后的时间文本 (HH:MM)
+ */
 function formatTime(isoString) {
-  if (!isoString) return "";
-  const date = new Date(isoString);
+  if (!isoString) return ""
+  const date = new Date(isoString)
   return date.toLocaleTimeString("zh-CN", {
     hour: "2-digit",
     minute: "2-digit",
-  });
+  })
 }
 
+/**
+ * 复制消息内容到剪贴板
+ */
 function copyMessage() {
-  const text = messageContent.value.text || "";
-  navigator.clipboard.writeText(text);
+  const text = messageContent.value.text || ""
+  navigator.clipboard.writeText(text)
 }
 </script>
 

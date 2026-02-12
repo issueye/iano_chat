@@ -106,50 +106,65 @@
 </template>
 
 <script setup>
+/**
+ * ChatInput 组件 - 聊天输入区域
+ * 提供消息输入、Agent 选择、目录选择等功能
+ */
 import { ref, computed } from "vue"
 import { Button } from "@/components/ui/button"
 import { Tooltip } from "@/components/ui/tooltip"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { Paperclip, Send, Loader2, FolderOpen, X } from "lucide-vue-next"
+import { SelectDirectory } from "@/lib/wails/go/main/App"
 
-// Wails Go binding
-const selectDirectoryFromWails = async () => {
-  if (window.go && window.go.main && window.go.main.App && window.go.main.App.SelectDirectory) {
-    return await window.go.main.App.SelectDirectory()
-  }
-  // Fallback for browser mode
-  return null
-}
-
+/**
+ * 组件属性定义
+ */
 const props = defineProps({
+  /** 是否正在加载中 */
   isLoading: {
     type: Boolean,
     default: false,
   },
+  /** 可用的 Agent 列表 */
   agents: {
     type: Array,
     default: () => [],
   },
+  /** 当前选中的 Agent ID */
   modelValue: {
     type: String,
     default: "",
   },
 })
 
+/** 组件事件定义 */
 const emit = defineEmits(["send", "update:modelValue", "select-directory"])
 
+/** 输入文本内容 */
 const inputText = ref("")
+/** textarea 元素引用 */
 const textareaRef = ref(null)
+/** 选中的目录路径 */
 const selectedDirectory = ref("")
 
+/**
+ * 计算当前选中的 Agent 对象
+ */
 const currentAgent = computed(() => {
   return props.agents.find(a => a.id === props.modelValue)
 })
 
+/**
+ * 计算是否可以发送消息
+ */
 const canSend = computed(() => {
   return inputText.value.trim() && !props.isLoading
 })
 
+/**
+ * 自动调整 textarea 高度
+ */
 function autoResize() {
   const textarea = textareaRef.value
   if (textarea) {
@@ -158,6 +173,10 @@ function autoResize() {
   }
 }
 
+/**
+ * 处理回车键事件
+ * @param event - 键盘事件对象
+ */
 function handleEnter(event) {
   if (event.shiftKey) {
     return
@@ -165,6 +184,9 @@ function handleEnter(event) {
   sendMessage()
 }
 
+/**
+ * 发送消息
+ */
 function sendMessage() {
   const text = inputText.value.trim()
   if (!text || props.isLoading) return
@@ -178,9 +200,13 @@ function sendMessage() {
   }
 }
 
+/**
+ * 选择目录
+ * 调用 Wails 后端打开目录选择对话框
+ */
 async function selectDirectory() {
   try {
-    const path = await selectDirectoryFromWails()
+    const path = await SelectDirectory()
     if (path) {
       selectedDirectory.value = path
       emit("select-directory", path)
@@ -190,6 +216,9 @@ async function selectDirectory() {
   }
 }
 
+/**
+ * 清除已选择的目录
+ */
 function clearDirectory() {
   selectedDirectory.value = ""
 }
