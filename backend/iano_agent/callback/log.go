@@ -48,13 +48,12 @@ func (cb *LogCallbackHandler) OnEndWithStreamOutput(ctx context.Context, info *c
 			}
 		}()
 
-		defer output.Close() // remember to close the stream in defer
+		defer output.Close()
 
 		fmt.Println("=========[OnEndStream]=========")
 		for {
 			frame, err := output.Recv()
 			if errors.Is(err, io.EOF) {
-				// finish
 				break
 			}
 			if err != nil {
@@ -68,15 +67,16 @@ func (cb *LogCallbackHandler) OnEndWithStreamOutput(ctx context.Context, info *c
 				return
 			}
 
-			// 解析 frame 中的 response_meta 字段
 			var reactAgentOut ReActAgentOut
 			err = json.Unmarshal(s, &reactAgentOut)
 			if err != nil {
-				fmt.Printf("internal error: %s\n", err)
-				return
+				if info.Name == graphInfoName {
+					fmt.Printf("AGENT[%s]: %s\n", info.Name, string(s))
+				}
+				continue
 			}
 
-			if info.Name == graphInfoName { // 仅打印 graph 的输出, 否则每个 stream 节点的输出都会打印一遍
+			if info.Name == graphInfoName {
 				fmt.Printf("AGENT[%s]: %s\n", info.Name, string(s))
 
 				if reactAgentOut.ResponseMeta.FinishReason == "stop" {

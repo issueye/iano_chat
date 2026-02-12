@@ -171,7 +171,7 @@ func (t *CommandExecuteTool) executeCommand(name string, args []string, timeout 
 
 	switch t.shell {
 	case ShellPowerShell:
-		cmd = exec.CommandContext(ctx, "powershell", "-Command", fullCommand)
+		cmd = exec.CommandContext(ctx, "powershell", "-NoProfile", "-Command", fullCommand)
 	case ShellCmd:
 		cmd = exec.CommandContext(ctx, "cmd", "/c", fullCommand)
 	default:
@@ -227,12 +227,19 @@ func (t *CommandExecuteTool) executeCommand(name string, args []string, timeout 
 type ShellExecuteTool struct {
 	timeout    time.Duration
 	workingDir string
+	shell      ShellType
 }
 
 func NewShellExecuteTool() *ShellExecuteTool {
-	return &ShellExecuteTool{
+	t := &ShellExecuteTool{
 		timeout: defaultTimeout,
 	}
+	if runtime.GOOS == "windows" {
+		t.shell = ShellPowerShell
+	} else {
+		t.shell = ShellBash
+	}
+	return t
 }
 
 func (t *ShellExecuteTool) WithTimeout(timeout time.Duration) *ShellExecuteTool {
@@ -242,6 +249,12 @@ func (t *ShellExecuteTool) WithTimeout(timeout time.Duration) *ShellExecuteTool 
 
 func (t *ShellExecuteTool) WithWorkingDir(dir string) *ShellExecuteTool {
 	t.workingDir = dir
+	return t
+}
+
+// WithShell 设置执行命令的 Shell 类型
+func (t *ShellExecuteTool) WithShell(shell ShellType) *ShellExecuteTool {
+	t.shell = shell
 	return t
 }
 
@@ -314,10 +327,13 @@ func (t *ShellExecuteTool) executeShell(command string, timeout time.Duration) (
 	defer cancel()
 
 	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
+	switch t.shell {
+	case ShellPowerShell:
+		cmd = exec.CommandContext(ctx, "powershell", "-NoProfile", "-Command", command)
+	case ShellCmd:
 		cmd = exec.CommandContext(ctx, "cmd", "/C", command)
-	} else {
-		cmd = exec.CommandContext(ctx, "sh", "-c", command)
+	default:
+		cmd = exec.CommandContext(ctx, "bash", "-c", command)
 	}
 
 	if t.workingDir != "" {
