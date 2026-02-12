@@ -170,7 +170,7 @@ func TestRegisterBuiltinTools(t *testing.T) {
 	GlobalRegistry.Clear()
 
 	ctx := context.Background()
-	err := RegisterBuiltinTools(ctx)
+	err := RegisterBuiltinTools(ctx, "")
 	if err != nil {
 		t.Errorf("RegisterBuiltinTools() error = %v", err)
 	}

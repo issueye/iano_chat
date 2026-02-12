@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"sync"
 
@@ -178,7 +179,7 @@ func GetBuiltinTools(ctx context.Context) (map[string]tool.BaseTool, error) {
 	return toolsMap, nil
 }
 
-func RegisterBuiltinTools(ctx context.Context) error {
+func RegisterBuiltinTools(ctx context.Context, workDir string) error {
 	ddgTool, err := NewDuckDuckGoTool()
 	if err != nil {
 		return fmt.Errorf("创建 DuckDuckGo 工具失败: %w", err)
@@ -192,7 +193,12 @@ func RegisterBuiltinTools(ctx context.Context) error {
 		return fmt.Errorf("注册 HTTP 工具失败: %w", err)
 	}
 
-	basePath, _ := os.Getwd()
+	basePath := workDir
+	if basePath == "" {
+		basePath, _ = os.Getwd()
+	}
+	slog.Info("当前工作区", slog.String("workDir", basePath))
+
 	if err := GlobalRegistry.Register("file_read", NewFileReadTool(basePath)); err != nil {
 		return fmt.Errorf("注册文件读取工具失败: %w", err)
 	}

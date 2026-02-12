@@ -96,7 +96,7 @@ func (a *Agent) makeToolsConfig() (compose.ToolsNodeConfig, error) {
 
 	if len(bts) == 0 {
 		ctx := context.Background()
-		if err := tools.RegisterBuiltinTools(ctx); err != nil {
+		if err := tools.RegisterBuiltinTools(ctx, a.workDir); err != nil {
 			return compose.ToolsNodeConfig{}, fmt.Errorf("注册内置工具失败: %w", err)
 		}
 		bts = a.toolRegistry.List()

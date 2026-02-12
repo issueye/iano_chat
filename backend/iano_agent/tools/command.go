@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"runtime"
@@ -178,6 +179,8 @@ func (t *CommandExecuteTool) executeCommand(name string, args []string, timeout 
 		cmd = exec.CommandContext(ctx, "bash", "-c", fullCommand)
 	}
 
+	slog.Info("当前工作区", slog.String("workDir", t.workingDir))
+
 	if t.workingDir != "" {
 		cmd.Dir = t.workingDir
 	}
@@ -335,6 +338,8 @@ func (t *ShellExecuteTool) executeShell(command string, timeout time.Duration) (
 	default:
 		cmd = exec.CommandContext(ctx, "bash", "-c", command)
 	}
+
+	slog.Info("当前工作区", slog.String("workDir", t.workingDir))
 
 	if t.workingDir != "" {
 		cmd.Dir = t.workingDir
