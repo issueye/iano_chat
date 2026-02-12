@@ -23,7 +23,7 @@
       </Avatar>
 
       <!-- Message Content -->
-      <div class="flex flex-col gap-1.5">
+      <div class="flex flex-col gap-1.5 min-w-0">
         <!-- Name and Time -->
         <div
           :class="[
@@ -42,37 +42,37 @@
         <!-- Message Bubble -->
         <div
           :class="[
-            'relative px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl shadow-sm',
+            'relative px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl shadow-sm min-w-0',
             message.type === 'user'
               ? 'bg-primary text-primary-foreground rounded-tr-sm'
               : 'bg-card border border-border text-foreground rounded-tl-sm',
           ]"
         >
           <!-- Content Blocks (按顺序渲染) -->
-          <div v-if="messageContent.blocks?.length" class="text-sm leading-relaxed text-inherit space-y-3">
+          <div v-if="messageContent.blocks?.length" class="text-sm leading-relaxed text-inherit space-y-3 min-w-0">
             <template v-for="(block, index) in messageContent.blocks" :key="index">
               <!-- 文本块 -->
-              <div v-if="block.type === 'text' && block.text">
+              <div v-if="block.type === 'text' && block.text" class="min-w-0">
                 <MarkdownRenderer :content="block.text" />
               </div>
               
               <!-- 工具调用块 -->
               <div v-else-if="block.type === 'tool_call' && block.tool_call" 
-                   class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-xs overflow-hidden">
+                   class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-xs min-w-0">
                 <div class="flex items-center gap-2 font-medium text-blue-700 dark:text-blue-300">
-                  <div class="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                  <div class="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0">
                     <Wrench class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <span class="capitalize">{{ formatToolName(block.tool_call.function?.name) }}</span>
+                  <span class="capitalize truncate">{{ formatToolName(block.tool_call.function?.name) }}</span>
                 </div>
-                <div class="mt-2 space-y-1">
+                <div class="mt-2 space-y-1 min-w-0">
                   <div
                     v-for="(value, key) in parseToolArguments(block.tool_call.function?.arguments)"
                     :key="key"
-                    class="flex items-start gap-2 text-[11px]"
+                    class="flex items-start gap-2 text-[11px] min-w-0"
                   >
                     <span class="text-blue-600 dark:text-blue-400 font-medium shrink-0">{{ key }}:</span>
-                    <span class="text-gray-600 dark:text-gray-400 break-all font-mono bg-white/50 dark:bg-black/20 rounded px-1.5 py-0.5">{{ formatParamValue(value) }}</span>
+                    <span class="text-gray-600 dark:text-gray-400 break-all font-mono bg-white/50 dark:bg-black/20 rounded px-1.5 py-0.5 min-w-0 overflow-hidden">{{ formatParamValue(value) }}</span>
                   </div>
                 </div>
               </div>
@@ -109,26 +109,26 @@
           </div>
 
           <!-- Fallback: 旧格式工具调用 -->
-          <div v-if="!messageContent.blocks?.length && messageContent.tool_calls?.length" class="mt-3 space-y-2">
+          <div v-if="!messageContent.blocks?.length && messageContent.tool_calls?.length" class="mt-3 space-y-2 min-w-0">
             <div
               v-for="tool in messageContent.tool_calls"
               :key="tool.id"
-              class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-xs overflow-hidden"
+              class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-xs min-w-0"
             >
               <div class="flex items-center gap-2 font-medium text-blue-700 dark:text-blue-300">
-                <div class="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                <div class="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0">
                   <Wrench class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 </div>
-                <span class="capitalize">{{ formatToolName(tool.function.name) }}</span>
+                <span class="capitalize truncate">{{ formatToolName(tool.function.name) }}</span>
               </div>
-              <div class="mt-2 space-y-1">
+              <div class="mt-2 space-y-1 min-w-0">
                 <div
                   v-for="(value, key) in parseToolArguments(tool.function.arguments)"
                   :key="key"
-                  class="flex items-start gap-2 text-[11px]"
+                  class="flex items-start gap-2 text-[11px] min-w-0"
                 >
                   <span class="text-blue-600 dark:text-blue-400 font-medium shrink-0">{{ key }}:</span>
-                  <span class="text-gray-600 dark:text-gray-400 break-all font-mono bg-white/50 dark:bg-black/20 rounded px-1.5 py-0.5">{{ formatParamValue(value) }}</span>
+                  <span class="text-gray-600 dark:text-gray-400 break-all font-mono bg-white/50 dark:bg-black/20 rounded px-1.5 py-0.5 min-w-0 overflow-hidden">{{ formatParamValue(value) }}</span>
                 </div>
               </div>
             </div>
