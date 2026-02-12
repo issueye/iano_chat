@@ -33,8 +33,9 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *web.Engine {
 	docs.SwaggerInfo.Schemes = []string{"http", "https"}
 
 	engine.GET("/swagger/doc.json", func(c *web.Context) {
-		c.SetHeader("Content-Type", "application/json")
-		c.String(http.StatusOK, docs.SwaggerInfo.ReadDoc())
+		c.SetHeader("Content-Type", "application/json; charset=utf-8")
+		c.Status(http.StatusOK)
+		c.Writer.Write([]byte(docs.SwaggerInfo.ReadDoc()))
 	})
 
 	engine.GET("/swagger/*any", func(c *web.Context) {
@@ -70,7 +71,8 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *web.Engine {
 </body>
 </html>`
 		c.SetHeader("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, html)
+		c.Status(http.StatusOK)
+		c.Writer.Write([]byte(html))
 	})
 
 	agentService := services.NewAgentService(db)
