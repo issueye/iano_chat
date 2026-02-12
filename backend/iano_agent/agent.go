@@ -241,3 +241,21 @@ func (a *Agent) GetConversationLayer() *ConversationLayer {
 	defer a.mu.RUnlock()
 	return a.conversation
 }
+
+// LoadConversationHistory 加载对话历史
+func (a *Agent) LoadConversationHistory(ctx context.Context, rounds []*ConversationRound) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	// 清空现有历史
+	a.conversation.RecentRounds = make([]*ConversationRound, 0)
+	a.conversation.SummaryContent = ""
+	a.conversation.SummarizedRounds = 0
+
+	// 加载新的历史记录
+	for _, round := range rounds {
+		if round != nil && round.UserMessage != nil {
+			a.conversation.RecentRounds = append(a.conversation.RecentRounds, round)
+		}
+	}
+}

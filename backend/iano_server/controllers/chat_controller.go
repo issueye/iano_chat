@@ -134,10 +134,13 @@ func (c *ChatController) Chat(ctx *web.Context) {
 	}
 	c.messageService.Create(userMsg)
 
+	// 加载会话历史记录
+	historyMessages, _ := c.messageService.GetBySessionID(req.SessionID)
+
 	var response string
 	var err error
 
-	response, err = c.agentManagerService.Chat(ctx.Request.Context(), agentID, req.Message, nil)
+	response, err = c.agentManagerService.ChatWithHistory(ctx.Request.Context(), agentID, req.Message, historyMessages, nil)
 	if err != nil {
 		if cerr := c.getOrCreateAgent(ctx.Request.Context(), agentID); cerr != nil {
 			response, err = c.chatWithProvider(ctx.Request.Context(), req.Message)
@@ -146,7 +149,7 @@ func (c *ChatController) Chat(ctx *web.Context) {
 				return
 			}
 		} else {
-			response, err = c.agentManagerService.Chat(ctx.Request.Context(), agentID, req.Message, nil)
+			response, err = c.agentManagerService.ChatWithHistory(ctx.Request.Context(), agentID, req.Message, historyMessages, nil)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
 				return
@@ -234,7 +237,10 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 		}
 	}
 
-	_, err = c.agentManagerService.Chat(ctx.Request.Context(), agentID, req.Message, iano.MessageCallback(callback))
+	// 加载会话历史记录
+	historyMessages, _ := c.messageService.GetBySessionID(req.SessionID)
+
+	_, err = c.agentManagerService.ChatWithHistory(ctx.Request.Context(), agentID, req.Message, historyMessages, iano.MessageCallback(callback))
 	if err != nil {
 		sse.EmitEvent("error", map[string]string{"error": err.Error()})
 	} else {

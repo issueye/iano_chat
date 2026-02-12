@@ -11,6 +11,7 @@ import (
 
 	"github.com/cloudwego/eino-ext/components/model/openai"
 	"github.com/cloudwego/eino/components/model"
+	"github.com/cloudwego/eino/schema"
 	"gorm.io/gorm"
 )
 
@@ -266,6 +267,93 @@ func (s *AgentManagerService) Chat(ctx context.Context, agentID string, message 
 	}
 
 	return s.manager.Chat(ctx, agentID, message, callback)
+}
+
+// ChatWithHistory 使用历史消息进行对话
+func (s *AgentManagerService) ChatWithHistory(ctx context.Context, agentID string, message string, history []models.Message, callback iano.MessageCallback) (string, error) {
+	if s.manager == nil {
+		return "", fmt.Errorf("agent manager not initialized")
+	}
+
+	if _, exists := s.manager.GetAgent(agentID); !exists {
+		chatModel, err := s.getOrCreateChatModel(ctx, "")
+		if err != nil {
+			return "", fmt.Errorf("failed to get chat model for agent %s: %w", agentID, err)
+		}
+
+		cfg := &iano.CreateAgentConfig{
+			ID:        agentID,
+			Name:      agentID,
+			MaxRounds: 50,
+			Model:     chatModel,
+		}
+
+		if _, err := s.manager.CreateAgent(ctx, cfg); err != nil {
+			return "", fmt.Errorf("failed to create temporary agent: %w", err)
+		}
+	}
+
+	// 获取 Agent 实例
+	instance, exists := s.manager.GetAgent(agentID)
+	if !exists {
+		return "", fmt.Errorf("agent with id %s not found", agentID)
+	}
+
+	// 将历史消息加载到 Agent 的对话中
+	if len(history) > 0 {
+		instance.Agent.LoadConversationHistory(ctx, convertToConversationRounds(history))
+	}
+
+	return s.manager.Chat(ctx, agentID, message, callback)
+}
+
+// convertToConversationRounds 将数据库消息转换为对话轮次
+func convertToConversationRounds(messages []models.Message) []*iano.ConversationRound {
+	rounds := make([]*iano.ConversationRound, 0)
+	var currentRound *iano.ConversationRound
+
+	for _, msg := range messages {
+		content := msg.GetText()
+		if content == "" {
+			continue
+		}
+
+		switch msg.Type {
+		case models.MessageTypeUser:
+			if currentRound != nil {
+				rounds = append(rounds, currentRound)
+			}
+			currentRound = &iano.ConversationRound{
+				UserMessage: schema.UserMessage(content),
+				Timestamp:   msg.CreatedAt,
+			}
+		case models.MessageTypeAssistant:
+			if currentRound != nil {
+				currentRound.AssistantMessage = schema.AssistantMessage(content, nil)
+				currentRound.TokenCount = estimateTokens(content)
+			}
+		}
+	}
+
+	if currentRound != nil {
+		rounds = append(rounds, currentRound)
+	}
+
+	return rounds
+}
+
+// estimateTokens 估算 token 数量（简单实现）
+func estimateTokens(text string) int {
+	// 简单估算：中文字符算 2 个 token，英文单词算 1 个 token
+	count := 0
+	for _, r := range text {
+		if r > 127 {
+			count += 2
+		} else if r != ' ' && r != '\n' && r != '\t' {
+			count++
+		}
+	}
+	return count
 }
 
 func (s *AgentManagerService) GetAgentInfo(agentID string) (map[string]interface{}, error) {
