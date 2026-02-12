@@ -132,49 +132,21 @@ export const useMessageStore = defineStore('message', () => {
       await sessionStore.createSession()
     }
 
-    const userMessage = {
-      id: Date.now().toString() + '_user',
-      session_id: String(sessionStore.currentSessionId),
-      type: 'user',
-      content: JSON.stringify({ text: content }),
-      status: 'completed'
-    }
-
-    addMessage(userMessage)
     setLoading(true)
     clearError()
     reconnectConfig.retryCount = 0
 
-    const assistantMessageId = Date.now().toString() + '_assistant'
-    const assistantMessage = {
-      id: assistantMessageId,
-      session_id: String(sessionStore.currentSessionId),
-      type: 'assistant',
-      content: JSON.stringify({ blocks: [], text: '', tool_calls: [] }),
-      status: 'streaming'
-    }
-    addMessage(assistantMessage)
-
-    await streamChat(content, directory, assistantMessageId, sessionStore.currentSessionId, agentStore.currentAgentId)
+    await streamChat(content, directory, sessionStore.currentSessionId, agentStore.currentAgentId)
   }
 
   /**
-   * 流式聊天核心逻辑（支持重连）
+   * 流式聊天核心逻辑（支持重连，后端驱动消息创建）
    */
-  async function streamChat(content, directory, assistantMessageId, sessionId, agentId) {
+  async function streamChat(content, directory, sessionId, agentId) {
     let accumulatedContent = ''
     let accumulatedToolCalls = []
     let contentBlocks = []
-
-    const existingMsg = messages.value.find(m => m.id === assistantMessageId)
-    if (existingMsg) {
-      try {
-        const parsed = JSON.parse(existingMsg.content)
-        accumulatedContent = parsed.text || ''
-        accumulatedToolCalls = parsed.tool_calls || []
-        contentBlocks = parsed.blocks || []
-      } catch (e) {}
-    }
+    let assistantMessageId = null
 
     try {
       abortController.value = new AbortController()
@@ -198,7 +170,7 @@ export const useMessageStore = defineStore('message', () => {
 
       const reader = streamResponse.body.getReader()
       const decoder = new TextDecoder()
-      let currentEventType = 'content_block'
+      let currentEventType = ''
 
       while (true) {
         const { done, value } = await reader.read()
@@ -214,7 +186,31 @@ export const useMessageStore = defineStore('message', () => {
             try {
               const eventData = JSON.parse(line.slice(6))
 
-              if (currentEventType === 'content_block') {
+              if (currentEventType === 'message_created') {
+                const msg = {
+                  id: eventData.id,
+                  session_id: eventData.session_id,
+                  type: eventData.type,
+                  content: eventData.content,
+                  status: eventData.status || 'completed',
+                  created_at: eventData.created_at
+                }
+                
+                const existingIndex = messages.value.findIndex(m => m.id === msg.id)
+                if (existingIndex === -1) {
+                  messages.value.push(msg)
+                }
+                
+                if (eventData.type === 'assistant') {
+                  assistantMessageId = eventData.id
+                  try {
+                    const parsed = JSON.parse(eventData.content)
+                    accumulatedContent = parsed.text || ''
+                    accumulatedToolCalls = parsed.tool_calls || []
+                    contentBlocks = parsed.blocks || []
+                  } catch (e) {}
+                }
+              } else if (currentEventType === 'content_block' && assistantMessageId) {
                 if (eventData.type === 'text' && eventData.text) {
                   accumulatedContent += eventData.text
 
@@ -245,9 +241,16 @@ export const useMessageStore = defineStore('message', () => {
                     tool_calls: accumulatedToolCalls
                   })
                 })
+              } else if (currentEventType === 'message_completed' && assistantMessageId) {
+                updateMessage(assistantMessageId, {
+                  status: eventData.status,
+                  ...(eventData.content && { content: eventData.content })
+                })
               } else if (currentEventType === 'error') {
                 setError(eventData.error)
-                updateMessage(assistantMessageId, { status: 'failed' })
+                if (assistantMessageId) {
+                  updateMessage(assistantMessageId, { status: 'failed' })
+                }
                 setLoading(false)
                 return
               }
@@ -255,17 +258,18 @@ export const useMessageStore = defineStore('message', () => {
               // 忽略不完整 JSON 的解析错误
             }
           } else if (line.trim() === '') {
-            currentEventType = 'content_block'
+            currentEventType = ''
           }
         }
       }
 
-      updateMessage(assistantMessageId, { status: 'completed' })
       setLoading(false)
 
     } catch (err) {
       if (err.name === 'AbortError') {
-        updateMessage(assistantMessageId, { status: 'failed' })
+        if (assistantMessageId) {
+          updateMessage(assistantMessageId, { status: 'failed' })
+        }
         setLoading(false)
         return
       }
@@ -282,11 +286,13 @@ export const useMessageStore = defineStore('message', () => {
         
         await new Promise(resolve => setTimeout(resolve, reconnectConfig.retryDelay * reconnectConfig.retryCount))
         
-        return streamChat(content, directory, assistantMessageId, sessionId, agentId)
+        return streamChat(content, directory, sessionId, agentId)
       }
 
       setError(err.message)
-      updateMessage(assistantMessageId, { status: 'failed' })
+      if (assistantMessageId) {
+        updateMessage(assistantMessageId, { status: 'failed' })
+      }
       setLoading(false)
     }
   }

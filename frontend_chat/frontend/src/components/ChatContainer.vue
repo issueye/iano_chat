@@ -52,6 +52,16 @@
         @select-directory="handleSelectDirectory"
       />
     </main>
+
+    <AlertDialog
+      v-model:open="deleteDialogOpen"
+      title="删除会话"
+      :description="`确定要删除会话「${deletingSession?.title || '未命名'}」吗？此操作无法撤销。`"
+      confirm-text="删除"
+      cancel-text="取消"
+      variant="destructive"
+      @confirm="executeDeleteSession"
+    />
   </div>
 </template>
 
@@ -68,12 +78,17 @@ import ChatHeader from "./ChatHeader.vue"
 import ChatMessages from "./ChatMessages.vue"
 import ChatWelcome from "./ChatWelcome.vue"
 import ChatInputArea from "./ChatInputArea.vue"
+import { AlertDialog } from "@/components/ui/alert-dialog"
 
 const chatStore = useChatStore()
 const themeStore = useThemeStore()
 
 /** 侧边栏是否打开 */
 const isSidebarOpen = ref(false)
+
+/** 删除确认对话框 */
+const deleteDialogOpen = ref(false)
+const deletingSession = ref(null)
 
 /**
  * 组件挂载时初始化
@@ -103,12 +118,21 @@ async function handleSessionSelect(sessionId) {
 }
 
 /**
- * 删除会话
+ * 删除会话（打开确认对话框）
  * @param sessionId - 会话 ID
  */
-async function handleDeleteSession(sessionId) {
-  if (confirm("确定要删除这个会话吗？")) {
-    await chatStore.deleteSession(sessionId)
+function handleDeleteSession(sessionId) {
+  deletingSession.value = chatStore.sessions.find(s => s.id === sessionId)
+  deleteDialogOpen.value = true
+}
+
+/**
+ * 执行删除会话
+ */
+async function executeDeleteSession() {
+  if (deletingSession.value) {
+    await chatStore.deleteSession(deletingSession.value.id)
+    deletingSession.value = null
   }
 }
 

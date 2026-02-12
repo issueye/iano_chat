@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	iano "iano_agent"
 	"iano_server/models"
@@ -115,6 +116,30 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 	}
 	c.messageService.Create(userMsg)
 
+	sse.EmitEvent("message_created", map[string]interface{}{
+		"type":       "user",
+		"id":         userMsg.ID,
+		"session_id": userMsg.SessionID,
+		"content":    userMsg.Content,
+		"created_at": userMsg.CreatedAt,
+	})
+
+	assistantMsg := &models.Message{
+		SessionID: req.SessionID,
+		Type:      models.MessageTypeAssistant,
+		Status:    models.MessageStatusStreaming,
+	}
+	assistantMsg.NewID()
+
+	sse.EmitEvent("message_created", map[string]interface{}{
+		"type":       "assistant",
+		"id":         assistantMsg.ID,
+		"session_id": assistantMsg.SessionID,
+		"content":    JSONString(map[string]interface{}{"blocks": []interface{}{}, "text": "", "tool_calls": []interface{}{}}),
+		"status":     "streaming",
+		"created_at": assistantMsg.CreatedAt,
+	})
+
 	var accumulatedContent string
 	var accumulatedToolCalls []models.ToolCall
 	var contentBlocks []models.ContentBlock
@@ -164,7 +189,6 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 		}
 	}
 
-	// 加载会话历史记录
 	historyMessages, err := c.messageService.GetBySessionID(req.SessionID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
@@ -177,7 +201,6 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 		return
 	}
 
-	// 转换聊天内容为 schema.Message 格式
 	chatMessages := make([]*schema.Message, 0, len(historyMessages))
 	for _, msg := range historyMessages {
 		switch msg.Type {
@@ -192,14 +215,22 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 
 	_, err = agent.Chat(ctx.Request.Context(), chatMessages, callback)
 	if err != nil {
+		assistantMsg.Status = models.MessageStatusFailed
+		assistantMsg.SetContent(&models.MessageContent{
+			Blocks:    contentBlocks,
+			Text:      accumulatedContent,
+			ToolCalls: accumulatedToolCalls,
+		})
+		c.messageService.Create(assistantMsg)
+
+		sse.EmitEvent("message_completed", map[string]interface{}{
+			"id":     assistantMsg.ID,
+			"status": "failed",
+			"error":  err.Error(),
+		})
 		sse.EmitEvent("error", map[string]string{"error": err.Error()})
 	} else {
-		assistantMsg := &models.Message{
-			SessionID: req.SessionID,
-			Type:      models.MessageTypeAssistant,
-			Status:    models.MessageStatusCompleted,
-		}
-		assistantMsg.NewID()
+		assistantMsg.Status = models.MessageStatusCompleted
 		msgContent := &models.MessageContent{
 			Blocks:    contentBlocks,
 			Text:      accumulatedContent,
@@ -209,10 +240,21 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 			assistantMsg.Content = accumulatedContent
 		}
 		c.messageService.Create(assistantMsg)
+
+		sse.EmitEvent("message_completed", map[string]interface{}{
+			"id":      assistantMsg.ID,
+			"status":  "completed",
+			"content": assistantMsg.Content,
+		})
 	}
 
 	sse.EmitEvent("done", map[string]string{"status": "completed"})
 	sse.Close()
+}
+
+func JSONString(v interface{}) string {
+	data, _ := json.Marshal(v)
+	return string(data)
 }
 
 func (c *ChatController) ClearSession(ctx *web.Context) {
