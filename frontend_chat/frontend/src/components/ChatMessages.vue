@@ -1,5 +1,8 @@
 <template>
-  <ScrollArea class="flex-1 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+  <ScrollArea
+    ref="scrollAreaRef"
+    class="flex-1 px-4 sm:px-6 lg:px-8 py-6 sm:py-8"
+  >
     <div class="mx-auto space-y-6 pb-20">
       <slot name="welcome" />
 
@@ -27,14 +30,15 @@
         {{ error }}
       </div>
     </div>
-    <Button
-      variant="ghost"
-      size="icon"
-      class="shrink-0 rounded-xl hover:bg-muted transition-colors h-8 w-8 absolute bottom-2 right-1/2 z-10"
-    >
-      <ArrowDownCircle class="h-8 w-8 text-muted-foreground" />
-    </Button>
   </ScrollArea>
+  <Button
+    variant="ghost"
+    size="icon"
+    class="shrink-0 rounded-xl hover:bg-muted transition-colors h-8 w-8 absolute bottom-[230px] right-1/2 z-10"
+    @click="scrollToBottom"
+  >
+    <ArrowDownCircle class="h-8 w-8 text-muted-foreground" />
+  </Button>
 </template>
 
 <script setup>
@@ -43,8 +47,18 @@
  * 显示聊天消息列表、加载状态和错误信息
  */
 import ChatMessage from "./ChatMessage.vue";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, AlertCircle, ArrowDownCircle } from "lucide-vue-next";
+import { ref } from "vue";
+
+const scrollAreaRef = ref(null);
+
+const scrollToBottom = () => {
+  console.log("scrollAreaRef.value", scrollAreaRef.value);
+
+  scrollAreaRef.value?.scrollToBottom();
+};
 
 /**
  * 组件属性定义
