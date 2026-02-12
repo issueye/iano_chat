@@ -15,12 +15,13 @@ import (
 )
 
 type Config struct {
-	Tools        []Tool
-	Callback     MessageCallback
-	MaxRounds    int
-	AllowedTools []string
-	SystemPrompt string
-	WorkDir      string
+	Tools           []Tool
+	Callback        MessageCallback
+	MaxRounds       int
+	AllowedTools    []string
+	AllowedCommands []string
+	SystemPrompt    string
+	WorkDir         string
 }
 
 func DefaultConfig() *Config {
@@ -32,14 +33,15 @@ func DefaultConfig() *Config {
 }
 
 type Agent struct {
-	config       *Config
-	ra           *react.Agent
-	chatModel    model.ToolCallingChatModel
-	mu           sync.RWMutex
-	tokenUsage   *TokenUsage
-	maxRounds    int
-	toolRegistry tools.Registry
-	workDir      string
+	config          *Config
+	ra              *react.Agent
+	chatModel       model.ToolCallingChatModel
+	mu              sync.RWMutex
+	tokenUsage      *TokenUsage
+	maxRounds       int
+	toolRegistry    tools.Registry
+	workDir         string
+	allowedCommands []string
 }
 
 func NewAgent(chatModel model.ToolCallingChatModel, opts ...Option) (*Agent, error) {
@@ -50,10 +52,11 @@ func NewAgent(chatModel model.ToolCallingChatModel, opts ...Option) (*Agent, err
 	}
 
 	agent := &Agent{
-		config:     cfg,
-		maxRounds:  cfg.MaxRounds,
-		tokenUsage: &TokenUsage{LastUpdated: time.Now()},
-		workDir:    cfg.WorkDir,
+		config:          cfg,
+		maxRounds:       cfg.MaxRounds,
+		tokenUsage:      &TokenUsage{LastUpdated: time.Now()},
+		workDir:         cfg.WorkDir,
+		allowedCommands: cfg.AllowedCommands,
 	}
 
 	agent.toolRegistry = tools.NewScopedRegistry(tools.GlobalRegistry, cfg.AllowedTools)
@@ -106,9 +109,30 @@ func (a *Agent) makeToolsConfig() (compose.ToolsNodeConfig, error) {
 		bts = tools.CreateToolsWithBasePath(a.workDir, a.toolRegistry.Names())
 	}
 
+	toolNames := a.toolRegistry.Names()
+	hasCommandTool := false
+	for _, name := range toolNames {
+		if name == "command_execute" {
+			hasCommandTool = true
+			break
+		}
+	}
+
 	toolsList := make([]tool.BaseTool, 0, len(bts))
 	for _, t := range bts {
 		toolsList = append(toolsList, t)
+	}
+
+	if hasCommandTool && len(a.allowedCommands) > 0 {
+		cmdTool := tools.NewCommandExecuteToolWithConfig(&tools.CommandToolConfig{
+			AllowedCommands: a.allowedCommands,
+		})
+		for i, name := range toolNames {
+			if name == "command_execute" {
+				toolsList[i] = cmdTool
+				break
+			}
+		}
 	}
 
 	return compose.ToolsNodeConfig{

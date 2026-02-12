@@ -40,3 +40,9 @@ func WithWorkDir(workDir string) Option {
 		c.WorkDir = workDir
 	}
 }
+
+func WithAllowedCommands(commands []string) Option {
+	return func(c *Config) {
+		c.AllowedCommands = commands
+	}
+}

@@ -58,6 +58,7 @@ func (s *AgentRuntimeService) GetAgent(ctx context.Context, agentID string, work
 	}
 
 	allowedTools := s.parseTools(agent.Tools)
+	allowedCommands := s.getAllowedCommands(allowedTools)
 
 	opts := []iano.Option{
 		iano.WithSystemPrompt(agent.Instructions),
@@ -67,6 +68,9 @@ func (s *AgentRuntimeService) GetAgent(ctx context.Context, agentID string, work
 	}
 	if workDir != "" {
 		opts = append(opts, iano.WithWorkDir(workDir))
+	}
+	if len(allowedCommands) > 0 {
+		opts = append(opts, iano.WithAllowedCommands(allowedCommands))
 	}
 
 	agentInstance, err := iano.NewAgent(chatModel, opts...)
@@ -163,6 +167,27 @@ func (s *AgentRuntimeService) parseTools(toolsStr string) []string {
 		return []string{toolsStr}
 	}
 	return tools
+}
+
+// getAllowedCommands 从工具列表中获取允许执行的命令配置
+func (s *AgentRuntimeService) getAllowedCommands(toolIDs []string) []string {
+	var allowedCommands []string
+
+	for _, toolID := range toolIDs {
+		tool, err := s.toolService.GetByID(toolID)
+		if err != nil {
+			continue
+		}
+
+		if tool.Name == "command_execute" || tool.Name == "command" {
+			cmdConfig := tool.GetCommandConfig()
+			if cmdConfig != nil && len(cmdConfig.AllowedCommands) > 0 {
+				allowedCommands = append(allowedCommands, cmdConfig.AllowedCommands...)
+			}
+		}
+	}
+
+	return allowedCommands
 }
 
 // loadToolsToAgent 加载工具到 Agent

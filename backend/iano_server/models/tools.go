@@ -84,3 +84,23 @@ func (table *Tool) GetParameters() []ToolParameter {
 	json.Unmarshal([]byte(table.Parameters), &params)
 	return params
 }
+
+// CommandConfig 命令执行工具配置
+type CommandConfig struct {
+	AllowedCommands []string `json:"allowed_commands"` // 允许执行的命令列表
+	Timeout         int      `json:"timeout"`          // 超时时间（秒）
+	WorkingDir      string   `json:"working_dir"`      // 工作目录
+	Shell           string   `json:"shell"`            // shell 类型: powershell, cmd, bash
+}
+
+// GetCommandConfig 获取命令配置
+func (table *Tool) GetCommandConfig() *CommandConfig {
+	if table.Config == "" {
+		return nil
+	}
+	var config CommandConfig
+	if err := json.Unmarshal([]byte(table.Config), &config); err != nil {
+		return nil
+	}
+	return &config
+}

@@ -55,6 +55,10 @@ type CommandExecuteTool struct {
 }
 
 func NewCommandExecuteTool() *CommandExecuteTool {
+	return NewCommandExecuteToolWithConfig(nil)
+}
+
+func NewCommandExecuteToolWithConfig(config *CommandToolConfig) *CommandExecuteTool {
 	t := &CommandExecuteTool{
 		timeout:         defaultTimeout,
 		allowedCommands: make(map[string]bool),
@@ -70,13 +74,36 @@ func NewCommandExecuteTool() *CommandExecuteTool {
 		}
 	}
 
-	if runtime.GOOS == "windows" {
+	if config != nil {
+		if len(config.AllowedCommands) > 0 {
+			t.allowedCommands = make(map[string]bool)
+			for _, cmd := range config.AllowedCommands {
+				t.allowedCommands[cmd] = true
+			}
+		}
+		if config.Timeout > 0 {
+			t.timeout = time.Duration(config.Timeout) * time.Second
+		}
+		if config.WorkingDir != "" {
+			t.workingDir = config.WorkingDir
+		}
+		if config.Shell != "" {
+			t.shell = config.Shell
+		}
+	} else if runtime.GOOS == "windows" {
 		t.shell = ShellPowerShell
 	} else {
 		t.shell = ShellBash
 	}
 
 	return t
+}
+
+type CommandToolConfig struct {
+	AllowedCommands []string
+	Timeout         int
+	WorkingDir      string
+	Shell           ShellType
 }
 
 func (t *CommandExecuteTool) WithTimeout(timeout time.Duration) *CommandExecuteTool {
