@@ -31,14 +31,17 @@
       </div>
     </div>
   </ScrollArea>
-  <Button
-    variant="ghost"
-    size="icon"
-    class="shrink-0 rounded-xl hover:bg-muted transition-colors h-8 w-8 absolute bottom-[230px] right-1/2 z-10"
-    @click="scrollToBottom"
-  >
-    <ArrowDownCircle class="h-8 w-8 text-muted-foreground" />
-  </Button>
+  <Transition name="scroll-button">
+    <Button
+      v-if="!isAtBottom"
+      variant="ghost"
+      size="icon"
+      class="shrink-0 rounded-xl hover:bg-muted transition-colors h-8 w-8 absolute bottom-[230px] right-1/2 z-10"
+      @click="scrollToBottom"
+    >
+      <ArrowDownCircle class="h-8 w-8 text-muted-foreground animate-bounce" />
+    </Button>
+  </Transition>
 </template>
 
 <script setup>
@@ -50,15 +53,58 @@ import ChatMessage from "./ChatMessage.vue";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, AlertCircle, ArrowDownCircle } from "lucide-vue-next";
-import { ref } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 
 const scrollAreaRef = ref(null);
+const isAtBottom = ref(true);
+let scrollHandler = null;
+
+const checkIsAtBottom = (el) => {
+  if (!el) return true;
+  const threshold = 100;
+  return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+};
+
+const handleScroll = (e) => {
+  isAtBottom.value = checkIsAtBottom(e.target);
+};
 
 const scrollToBottom = () => {
-  console.log("scrollAreaRef.value", scrollAreaRef.value);
-
   scrollAreaRef.value?.scrollToBottom();
 };
+
+const setupScrollListener = () => {
+  const viewport = scrollAreaRef.value?.viewportRef;
+  if (viewport) {
+    viewport.addEventListener("scroll", handleScroll);
+    scrollHandler = viewport;
+  }
+};
+
+const removeScrollListener = () => {
+  if (scrollHandler) {
+    scrollHandler.removeEventListener("scroll", handleScroll);
+    scrollHandler = null;
+  }
+};
+
+onMounted(() => {
+  setTimeout(setupScrollListener, 0);
+});
+
+onUnmounted(() => {
+  removeScrollListener();
+});
+
+watch(
+  () => scrollAreaRef.value?.viewportRef,
+  (newViewport) => {
+    if (newViewport) {
+      removeScrollListener();
+      setupScrollListener();
+    }
+  }
+);
 
 /**
  * 组件属性定义
@@ -81,3 +127,16 @@ defineProps({
   },
 });
 </script>
+
+<style scoped>
+.scroll-button-enter-active,
+.scroll-button-leave-active {
+  transition: all 0.3s ease;
+}
+
+.scroll-button-enter-from,
+.scroll-button-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
+}
+</style>
