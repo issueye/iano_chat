@@ -109,9 +109,9 @@ func (a *Agent) Loop(ctx context.Context, messages []*schema.Message, cb Message
 					toolResult, err := a.invokeTool(ctx, tc.Function.Name, tc.Function.Arguments)
 					if err != nil {
 						slog.Error("工具调用失败", "id", tc.ID, "name", tc.Function.Name, "arguments", tc.Function.Arguments, "error", err.Error())
-						return "", fmt.Errorf("工具调用失败: %w", err)
+						toolResult = fmt.Sprintf("工具调用错误: %s", err.Error())
 					}
-					slog.Info("工具调用成功", "id", tc.ID, "name", tc.Function.Name, "arguments", tc.Function.Arguments, "result", toolResult)
+					slog.Info("工具调用完成", "id", tc.ID, "name", tc.Function.Name, "arguments", tc.Function.Arguments, "result", toolResult)
 
 					loopMessage = append(loopMessage, &schema.Message{
 						Role:    schema.Tool,
