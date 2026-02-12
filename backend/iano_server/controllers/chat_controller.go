@@ -117,12 +117,49 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 
 	var accumulatedContent string
 	var accumulatedToolCalls []models.ToolCall
+	var contentBlocks []models.ContentBlock
 	callback := func(content string, isToolCall bool, toolCalls *iano.ToolCallInfo) {
+		if isToolCall && toolCalls != nil {
+			toolCall := models.ToolCall{
+				ID:   toolCalls.ID,
+				Type: "function",
+				Function: models.Function{
+					Name:      toolCalls.Name,
+					Arguments: toolCalls.Arguments,
+				},
+			}
+			accumulatedToolCalls = append(accumulatedToolCalls, toolCall)
+
+			contentBlocks = append(contentBlocks, models.ContentBlock{
+				Type:     "tool_call",
+				ToolCall: &toolCall,
+			})
+
+			sse.EmitEvent("content_block", map[string]interface{}{
+				"type": "tool_call",
+				"tool_call": map[string]interface{}{
+					"id":        toolCalls.ID,
+					"name":      toolCalls.Name,
+					"arguments": toolCalls.Arguments,
+				},
+			})
+		}
+
 		if content != "" {
 			accumulatedContent += content
-			sse.EmitEvent("message", map[string]interface{}{
-				"content":      content,
-				"is_tool_call": isToolCall,
+
+			if len(contentBlocks) > 0 && contentBlocks[len(contentBlocks)-1].Type == "text" {
+				contentBlocks[len(contentBlocks)-1].Text += content
+			} else {
+				contentBlocks = append(contentBlocks, models.ContentBlock{
+					Type: "text",
+					Text: content,
+				})
+			}
+
+			sse.EmitEvent("content_block", map[string]interface{}{
+				"type": "text",
+				"text": content,
 			})
 		}
 	}
@@ -164,6 +201,7 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 		}
 		assistantMsg.NewID()
 		msgContent := &models.MessageContent{
+			Blocks:    contentBlocks,
 			Text:      accumulatedContent,
 			ToolCalls: accumulatedToolCalls,
 		}

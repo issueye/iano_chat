@@ -142,7 +142,7 @@ export const useMessageStore = defineStore('message', () => {
       id: assistantMessageId,
       session_id: String(sessionStore.currentSessionId),
       type: 'assistant',
-      content: JSON.stringify({ text: '', tool_calls: [] }),
+      content: JSON.stringify({ blocks: [], text: '', tool_calls: [] }),
       status: 'streaming'
     }
     addMessage(assistantMessage)
@@ -155,7 +155,7 @@ export const useMessageStore = defineStore('message', () => {
           session_id: String(sessionStore.currentSessionId),
           agent_id: agentStore.currentAgentId,
           message: content,
-          directory: directory || undefined
+          work_dir: directory || undefined
         })
       })
 
@@ -167,9 +167,9 @@ export const useMessageStore = defineStore('message', () => {
       const decoder = new TextDecoder()
       let accumulatedContent = ''
       let accumulatedToolCalls = []
+      let contentBlocks = []
 
-      // 用于跟踪当前事件类型
-      let currentEventType = 'message'
+      let currentEventType = 'content_block'
 
       while (true) {
         const { done, value } = await reader.read()
@@ -180,54 +180,51 @@ export const useMessageStore = defineStore('message', () => {
 
         for (const line of lines) {
           if (line.startsWith('event: ')) {
-            // 记录当前事件类型
             currentEventType = line.slice(7).trim()
           } else if (line.startsWith('data: ')) {
             try {
               const eventData = JSON.parse(line.slice(6))
 
-              // 根据事件类型处理数据
-              if (currentEventType === 'message') {
-                if (eventData.content) {
-                  accumulatedContent += eventData.content
+              if (currentEventType === 'content_block') {
+                if (eventData.type === 'text' && eventData.text) {
+                  accumulatedContent += eventData.text
+
+                  const lastBlock = contentBlocks[contentBlocks.length - 1]
+                  if (lastBlock && lastBlock.type === 'text') {
+                    lastBlock.text += eventData.text
+                  } else {
+                    contentBlocks.push({ type: 'text', text: eventData.text })
+                  }
+                } else if (eventData.type === 'tool_call' && eventData.tool_call) {
+                  const tc = eventData.tool_call
+                  const toolCall = {
+                    id: tc.id,
+                    type: 'function',
+                    function: {
+                      name: tc.name,
+                      arguments: tc.arguments
+                    }
+                  }
+                  accumulatedToolCalls.push(toolCall)
+                  contentBlocks.push({ type: 'tool_call', tool_call: toolCall })
                 }
-                if (eventData.error) {
-                  setError(eventData.error)
-                  updateMessage(assistantMessageId, { status: 'failed' })
-                }
-                // 更新消息显示
+
                 updateMessage(assistantMessageId, {
                   content: JSON.stringify({
+                    blocks: contentBlocks,
                     text: accumulatedContent,
                     tool_calls: accumulatedToolCalls
                   })
                 })
-              } else if (currentEventType === 'tool_call') {
-                // 处理工具调用事件
-                if (eventData.id && eventData.name) {
-                  accumulatedToolCalls.push({
-                    id: eventData.id,
-                    type: 'function',
-                    function: {
-                      name: eventData.name,
-                      arguments: eventData.arguments
-                    }
-                  })
-                  // 更新消息显示工具调用
-                  updateMessage(assistantMessageId, {
-                    content: JSON.stringify({
-                      text: accumulatedContent,
-                      tool_calls: accumulatedToolCalls
-                    })
-                  })
-                }
+              } else if (currentEventType === 'error') {
+                setError(eventData.error)
+                updateMessage(assistantMessageId, { status: 'failed' })
               }
             } catch (e) {
               // 忽略不完整 JSON 的解析错误
             }
           } else if (line.trim() === '') {
-            // 空行表示事件结束，重置事件类型
-            currentEventType = 'message'
+            currentEventType = 'content_block'
           }
         }
       }

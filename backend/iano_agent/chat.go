@@ -96,6 +96,16 @@ func (a *Agent) Loop(ctx context.Context, messages []*schema.Message, cb Message
 			if len(msg.ToolCalls) > 0 {
 				hasToolCalls = true
 				for _, tc := range msg.ToolCalls {
+					toolCallInfo := &ToolCallInfo{
+						ID:        tc.ID,
+						Name:      tc.Function.Name,
+						Arguments: tc.Function.Arguments,
+					}
+
+					if cb != nil {
+						cb("", true, toolCallInfo)
+					}
+
 					toolResult, err := a.invokeTool(ctx, tc.Function.Name, tc.Function.Arguments)
 					if err != nil {
 						slog.Error("工具调用失败", "id", tc.ID, "name", tc.Function.Name, "arguments", tc.Function.Arguments, "error", err.Error())

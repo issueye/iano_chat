@@ -38,14 +38,18 @@ type Function struct {
 	Arguments string `json:"arguments"`
 }
 
-// ToolCall 工具调用
 type ToolCall struct {
 	ID       string   `json:"id"`
 	Type     string   `json:"type"`
 	Function Function `json:"function"`
 }
 
-// Attachment 附件
+type ContentBlock struct {
+	Type     string    `json:"type"`               // "text" 或 "tool_call"
+	Text     string    `json:"text,omitempty"`     // 当 type 为 "text" 时
+	ToolCall *ToolCall `json:"tool_call,omitempty"` // 当 type 为 "tool_call" 时
+}
+
 type Attachment struct {
 	Type     string `json:"type"`
 	URL      string `json:"url"`
@@ -54,12 +58,12 @@ type Attachment struct {
 	MimeType string `json:"mime_type"`
 }
 
-// MessageContent 消息内容
 type MessageContent struct {
-	Text             string       `json:"text"`
-	ToolCalls        []ToolCall   `json:"tool_calls,omitempty"`
-	ReasoningContent string       `json:"reasoning_content,omitempty"`
-	Attachments      []Attachment `json:"attachments,omitempty"`
+	Blocks           []ContentBlock `json:"blocks,omitempty"`
+	Text             string         `json:"text,omitempty"`
+	ToolCalls        []ToolCall     `json:"tool_calls,omitempty"`
+	ReasoningContent string         `json:"reasoning_content,omitempty"`
+	Attachments      []Attachment   `json:"attachments,omitempty"`
 }
 
 // Message 消息模型
