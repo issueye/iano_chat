@@ -53,11 +53,29 @@ import ChatMessage from "./ChatMessage.vue";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, AlertCircle, ArrowDownCircle } from "lucide-vue-next";
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { ref, onMounted, onUnmounted, watch, nextTick } from "vue";
 
 const scrollAreaRef = ref(null);
 const isAtBottom = ref(true);
 let scrollHandler = null;
+
+const props = defineProps({
+  /** 消息列表 */
+  messages: {
+    type: Array,
+    default: () => [],
+  },
+  /** 是否正在加载 */
+  isLoading: {
+    type: Boolean,
+    default: false,
+  },
+  /** 错误信息 */
+  error: {
+    type: String,
+    default: null,
+  },
+});
 
 const checkIsAtBottom = (el) => {
   if (!el) return true;
@@ -106,26 +124,26 @@ watch(
   }
 );
 
-/**
- * 组件属性定义
- */
-defineProps({
-  /** 消息列表 */
-  messages: {
-    type: Array,
-    default: () => [],
-  },
-  /** 是否正在加载 */
-  isLoading: {
-    type: Boolean,
-    default: false,
-  },
-  /** 错误信息 */
-  error: {
-    type: String,
-    default: null,
-  },
-});
+watch(
+  () => props.messages.length,
+  () => {
+    nextTick(() => {
+      scrollToBottom();
+    });
+  }
+);
+
+watch(
+  () => props.isLoading,
+  (loading) => {
+    if (loading) {
+      nextTick(() => {
+        scrollToBottom();
+      });
+    }
+  }
+);
+
 </script>
 
 <style scoped>

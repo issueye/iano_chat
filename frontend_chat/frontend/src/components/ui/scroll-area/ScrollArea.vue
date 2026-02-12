@@ -7,7 +7,6 @@ const viewportRef = ref(null)
 
 const scrollToBottom = (options) => {
   const el = viewportRef.value
-  console.log('el', el);
   if (el) {
     el.scrollTo({
       top: el.scrollHeight,

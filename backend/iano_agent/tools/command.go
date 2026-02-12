@@ -153,12 +153,15 @@ func (t *CommandExecuteTool) InvokableRun(ctx context.Context, argumentsInJSON s
 		}
 	}
 
-	cmdArgs := []string{}
+	cmdParts := strings.Fields(args.Command)
+	cmdName := cmdParts[0]
+	cmdArgs := cmdParts[1:]
+
 	if args.Args != "" {
-		cmdArgs = strings.Fields(args.Args)
+		cmdArgs = append(cmdArgs, strings.Fields(args.Args)...)
 	}
 
-	return t.executeCommand(args.Command, cmdArgs, timeout)
+	return t.executeCommand(cmdName, cmdArgs, timeout)
 }
 
 func (t *CommandExecuteTool) isCommandAllowed(command string) bool {
@@ -167,8 +170,18 @@ func (t *CommandExecuteTool) isCommandAllowed(command string) bool {
 		command = strings.TrimSuffix(command, ".exe")
 	}
 
-	_, allowed := t.allowedCommands[command]
-	return allowed
+	if _, allowed := t.allowedCommands[command]; allowed {
+		return true
+	}
+
+	baseCmd := strings.Fields(command)
+	if len(baseCmd) > 0 {
+		if _, allowed := t.allowedCommands[baseCmd[0]]; allowed {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (t *CommandExecuteTool) executeCommand(name string, args []string, timeout time.Duration) (string, error) {
