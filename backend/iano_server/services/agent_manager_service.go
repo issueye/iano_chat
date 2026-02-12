@@ -60,7 +60,7 @@ func (s *AgentManagerService) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (s *AgentManagerService) ensureDefaultAgents(ctx context.Context) {
+func (s *AgentManagerService) ensureDefaultAgents(_ context.Context) {
 	defaultAgents := []struct {
 		ID           string
 		Name         string
