@@ -606,3 +606,112 @@ func formatSize(size int64) string {
 	}
 	return fmt.Sprintf("%.1f %cB", float64(size)/float64(div), "KMGTPE"[exp])
 }
+
+type FileCreateTool struct {
+	basePath string
+}
+
+func NewFileCreateTool(basePath string) *FileCreateTool {
+	if basePath == "" {
+		basePath, _ = os.Getwd()
+	}
+	return &FileCreateTool{basePath: basePath}
+}
+
+func (t *FileCreateTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
+	return &schema.ToolInfo{
+		Name: "file_create",
+		Desc: "创建新文件或目录",
+		ParamsOneOf: schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{
+			"path": {
+				Type:     schema.String,
+				Desc:     "文件或目录路径",
+				Required: true,
+			},
+			"type": {
+				Type:     schema.String,
+				Desc:     "创建类型: file(文件) 或 dir(目录)，默认 file",
+				Required: false,
+			},
+			"content": {
+				Type:     schema.String,
+				Desc:     "文件初始内容（仅创建文件时有效）",
+				Required: false,
+			},
+		}),
+	}, nil
+}
+
+func (t *FileCreateTool) InvokableRun(ctx context.Context, argumentsInJSON string, opts ...tool.Option) (string, error) {
+	var args struct {
+		Path    string `json:"path"`
+		Type    string `json:"type"`
+		Content string `json:"content"`
+	}
+
+	slog.Info("file_create 工具参数", "arguments", argumentsInJSON)
+
+	if err := json.Unmarshal([]byte(argumentsInJSON), &args); err != nil {
+		return "", fmt.Errorf("参数解析失败: %w", err)
+	}
+
+	if args.Path == "" {
+		return "", fmt.Errorf("路径不能为空")
+	}
+
+	if args.Type == "" {
+		args.Type = "file"
+	}
+
+	absPath, err := t.resolvePath(args.Path)
+	if err != nil {
+		return "", err
+	}
+
+	if _, err := os.Stat(absPath); err == nil {
+		return "", fmt.Errorf("路径已存在: %s", args.Path)
+	}
+
+	if args.Type == "dir" {
+		if err := os.MkdirAll(absPath, 0755); err != nil {
+			return "", fmt.Errorf("创建目录失败: %w", err)
+		}
+		return fmt.Sprintf("已创建目录: %s", args.Path), nil
+	}
+
+	dir := filepath.Dir(absPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", fmt.Errorf("创建父目录失败: %w", err)
+	}
+
+	file, err := os.OpenFile(absPath, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0644)
+	if err != nil {
+		return "", fmt.Errorf("创建文件失败: %w", err)
+	}
+	defer file.Close()
+
+	if args.Content != "" {
+		if _, err := file.WriteString(args.Content); err != nil {
+			return "", fmt.Errorf("写入文件内容失败: %w", err)
+		}
+	}
+
+	return fmt.Sprintf("已创建文件: %s", args.Path), nil
+}
+
+func (t *FileCreateTool) resolvePath(path string) (string, error) {
+	absPath := path
+	if !filepath.IsAbs(path) {
+		absPath = filepath.Join(t.basePath, path)
+	}
+	absPath = filepath.Clean(absPath)
+
+	if t.basePath != "" {
+		rel, err := filepath.Rel(t.basePath, absPath)
+		if err != nil || strings.HasPrefix(rel, "..") {
+			return "", fmt.Errorf("路径超出允许范围")
+		}
+	}
+
+	return absPath, nil
+}

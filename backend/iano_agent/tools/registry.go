@@ -153,6 +153,7 @@ func GetBuiltinTools(ctx context.Context) (map[string]tool.BaseTool, error) {
 	basePath, _ := os.Getwd()
 	toolsMap["file_read"] = NewFileReadTool(basePath)
 	toolsMap["file_write"] = NewFileWriteTool(basePath)
+	toolsMap["file_create"] = NewFileCreateTool(basePath)
 	toolsMap["file_list"] = NewFileListTool(basePath)
 	toolsMap["file_delete"] = NewFileDeleteTool(basePath)
 	toolsMap["file_info"] = NewFileInfoTool(basePath)
@@ -204,6 +205,9 @@ func RegisterBuiltinTools(ctx context.Context, workDir string) error {
 	}
 	if err := GlobalRegistry.Register("file_write", NewFileWriteTool(basePath)); err != nil {
 		return fmt.Errorf("注册文件写入工具失败: %w", err)
+	}
+	if err := GlobalRegistry.Register("file_create", NewFileCreateTool(basePath)); err != nil {
+		return fmt.Errorf("注册文件创建工具失败: %w", err)
 	}
 	if err := GlobalRegistry.Register("file_list", NewFileListTool(basePath)); err != nil {
 		return fmt.Errorf("注册文件列表工具失败: %w", err)
@@ -445,6 +449,8 @@ func CreateToolsWithBasePath(basePath string, toolNames []string) []tool.Invokab
 			t = NewFileReadTool(basePath)
 		case "file_write":
 			t = NewFileWriteTool(basePath)
+		case "file_create":
+			t = NewFileCreateTool(basePath)
 		case "file_list":
 			t = NewFileListTool(basePath)
 		case "file_delete":
