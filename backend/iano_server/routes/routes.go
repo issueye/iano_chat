@@ -21,9 +21,10 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *web.Engine {
 	engine.SetWriteTimeout(time.Duration(cfg.Server.WriteTimeout) * time.Second)
 	engine.SetGracefulShutdown(true)
 
+	// CORS 中间件必须最先注册，确保跨域请求能正确处理
+	engine.Use(webMiddleware.CORS())
 	engine.Use(webMiddleware.Recovery())
 	engine.Use(webMiddleware.Logger())
-	engine.Use(webMiddleware.CORS())
 
 	agentService := services.NewAgentService(db)
 	messageService := services.NewMessageService(db)

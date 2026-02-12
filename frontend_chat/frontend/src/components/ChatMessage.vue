@@ -44,17 +44,12 @@
           :class="[
             'relative px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl shadow-sm',
             message.type === 'user'
-              ? 'bg-primary text-white rounded-tr-sm'
+              ? 'bg-primary text-primary-foreground rounded-tr-sm'
               : 'bg-card border border-border text-foreground rounded-tl-sm',
           ]"
         >
           <!-- Content -->
-          <div
-            :class="[
-              'text-sm leading-relaxed',
-              message.type === 'user' ? 'text-white font-medium' : 'text-foreground'
-            ]"
-          >
+          <div class="text-sm leading-relaxed text-inherit">
             <template v-if="messageContent.text">
               <MarkdownRenderer :content="messageContent.text" />
             </template>
@@ -241,16 +236,12 @@ function copyMessage() {
   }
 }
 
-/* 用户消息中的 Markdown 内容强制白色 */
-:deep(.bg-primary) .markdown-content,
-:deep(.bg-primary) .markdown-content p,
-:deep(.bg-primary) .markdown-content span,
-:deep(.bg-primary) .markdown-content div {
-  color: white !important;
+/* 确保用户消息中的 Markdown 内容继承主题颜色 */
+:deep(.markdown-content) {
+  color: inherit;
 }
 
-/* 确保用户消息中的所有文字都是白色 */
-:deep(.bg-primary) * {
+:deep(.markdown-content *) {
   color: inherit;
 }
 </style>

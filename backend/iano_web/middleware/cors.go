@@ -42,7 +42,7 @@ func CORSWithConfig(config CORSConfig) web.HandlerFunc {
 		for _, o := range config.AllowOrigins {
 			if o == "*" {
 				// 如果允许所有来源，且有具体的 Origin 头，则返回该 Origin
-				// 这支持 Wails 等桌面应用的 wails:// 协议
+				// 这支持 Wails 等桌面应用的 wails:// 协议和开发服务器
 				if origin != "" {
 					allowOrigin = origin
 				} else {
@@ -56,9 +56,14 @@ func CORSWithConfig(config CORSConfig) web.HandlerFunc {
 			}
 		}
 
-		// 设置 CORS 响应头
+		// 设置 CORS 响应头 - 对所有请求都设置
 		if allowOrigin != "" {
 			c.SetHeader("Access-Control-Allow-Origin", allowOrigin)
+		} else {
+			// 如果没有匹配的 Origin，但请求带有 Origin 头，允许该 Origin
+			if origin != "" {
+				c.SetHeader("Access-Control-Allow-Origin", origin)
+			}
 		}
 
 		if config.AllowCredentials {
@@ -69,20 +74,31 @@ func CORSWithConfig(config CORSConfig) web.HandlerFunc {
 			c.SetHeader("Access-Control-Expose-Headers", strings.Join(config.ExposeHeaders, ", "))
 		}
 
-		// 处理预检请求
+		// 处理预检请求 (OPTIONS) - 必须优先处理
 		if c.Method == "OPTIONS" {
+			// 设置允许的 HTTP 方法
 			if len(config.AllowMethods) > 0 {
 				c.SetHeader("Access-Control-Allow-Methods", strings.Join(config.AllowMethods, ", "))
+			} else {
+				c.SetHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS")
 			}
 
-			if len(config.AllowHeaders) > 0 {
+			// 设置允许的请求头 - 支持所有请求头
+			requestHeaders := c.GetHeader("Access-Control-Request-Headers")
+			if requestHeaders != "" {
+				c.SetHeader("Access-Control-Allow-Headers", requestHeaders)
+			} else if len(config.AllowHeaders) > 0 {
 				c.SetHeader("Access-Control-Allow-Headers", strings.Join(config.AllowHeaders, ", "))
+			} else {
+				c.SetHeader("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization, X-Requested-With")
 			}
 
+			// 设置缓存时间
 			if config.MaxAge > 0 {
 				c.SetHeader("Access-Control-Max-Age", strconv.Itoa(config.MaxAge))
 			}
 
+			// 返回 204 No Content
 			c.Status(http.StatusNoContent)
 			return
 		}

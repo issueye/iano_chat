@@ -42,6 +42,17 @@ func (e *Engine) combineHandlers(handlers []HandlerFunc) []HandlerFunc {
 func (e *Engine) addRoute(method, pattern string, handlers ...HandlerFunc) {
 	fullPattern := e.prefix + pattern
 	e.router.addRoute(method, fullPattern, e.combineHandlers(handlers), e.router.extractParamKeys(fullPattern))
+
+	// 自动为每个路由添加 OPTIONS 支持，用于处理 CORS 预检请求
+	// 使用 CORS 中间件处理 OPTIONS 请求
+	if method != "OPTIONS" {
+		optionsHandlers := []HandlerFunc{func(c *Context) {
+			// OPTIONS 请求由 CORS 中间件处理
+			// 如果执行到这里，说明 CORS 中间件没有拦截请求
+			c.Status(http.StatusNoContent)
+		}}
+		e.router.addRoute("OPTIONS", fullPattern, e.combineHandlers(optionsHandlers), e.router.extractParamKeys(fullPattern))
+	}
 }
 
 func (e *Engine) GET(pattern string, handlers ...HandlerFunc) {
