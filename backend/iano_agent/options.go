@@ -33,3 +33,10 @@ func WithSystemPrompt(prompt string) Option {
 		c.SystemPrompt = prompt
 	}
 }
+
+// WithWorkDir 设置 Agent 的工作目录，限制文件操作工具的操作范围
+func WithWorkDir(workDir string) Option {
+	return func(c *Config) {
+		c.WorkDir = workDir
+	}
+}

@@ -21,6 +21,14 @@ const (
 	allowedCommandsKey = "ALLOWED_COMMANDS"
 )
 
+type ShellType string
+
+const (
+	ShellCmd        ShellType = "cmd"
+	ShellPowerShell ShellType = "powershell"
+	ShellBash       ShellType = "bash"
+)
+
 var (
 	defaultAllowedCommands = []string{
 		"ls", "dir", "cat", "head", "tail", "wc", "grep", "find",
@@ -28,15 +36,13 @@ var (
 		"git", "npm", "yarn", "pip", "python", "python3", "node",
 		"go", "cargo", "rustc",
 	}
-	blockedFlags = []string{
-		"--exec", "-exec", "|", ">", ">>", "<", "$(", "`", ";", "&&", "||",
-	}
 )
 
 type CommandExecuteTool struct {
 	timeout         time.Duration
 	allowedCommands map[string]bool
 	workingDir      string
+	shell           ShellType
 }
 
 func NewCommandExecuteTool() *CommandExecuteTool {
@@ -53,6 +59,12 @@ func NewCommandExecuteTool() *CommandExecuteTool {
 		for _, cmd := range strings.Split(extra, ",") {
 			t.allowedCommands[strings.TrimSpace(cmd)] = true
 		}
+	}
+
+	if runtime.GOOS == "windows" {
+		t.shell = ShellPowerShell
+	} else {
+		t.shell = ShellBash
 	}
 
 	return t
@@ -72,6 +84,12 @@ func (t *CommandExecuteTool) WithAllowedCommands(commands []string) *CommandExec
 	for _, cmd := range commands {
 		t.allowedCommands[cmd] = true
 	}
+	return t
+}
+
+// WithShell 设置执行命令的 Shell 类型
+func (t *CommandExecuteTool) WithShell(shell ShellType) *CommandExecuteTool {
+	t.shell = shell
 	return t
 }
 
@@ -118,10 +136,6 @@ func (t *CommandExecuteTool) InvokableRun(ctx context.Context, argumentsInJSON s
 		return "", fmt.Errorf("命令 '%s' 不在允许列表中", args.Command)
 	}
 
-	if hasBlockedContent(args.Args) {
-		return "", fmt.Errorf("参数包含不允许的内容")
-	}
-
 	timeout := t.timeout
 	if args.Timeout > 0 {
 		timeout = time.Duration(args.Timeout) * time.Second
@@ -148,20 +162,22 @@ func (t *CommandExecuteTool) isCommandAllowed(command string) bool {
 	return allowed
 }
 
-func hasBlockedContent(s string) bool {
-	for _, blocked := range blockedFlags {
-		if strings.Contains(s, blocked) {
-			return true
-		}
-	}
-	return false
-}
-
 func (t *CommandExecuteTool) executeCommand(name string, args []string, timeout time.Duration) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, name, args...)
+	var cmd *exec.Cmd
+	fullCommand := name + " " + strings.Join(args, " ")
+
+	switch t.shell {
+	case ShellPowerShell:
+		cmd = exec.CommandContext(ctx, "powershell", "-Command", fullCommand)
+	case ShellCmd:
+		cmd = exec.CommandContext(ctx, "cmd", "/c", fullCommand)
+	default:
+		cmd = exec.CommandContext(ctx, "bash", "-c", fullCommand)
+	}
+
 	if t.workingDir != "" {
 		cmd.Dir = t.workingDir
 	}

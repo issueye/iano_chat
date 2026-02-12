@@ -45,28 +45,28 @@ func NewAgentRuntimeService(
 
 // GetAgent 根据 Agent ID 获取 Agent 实例
 // 每次调用都创建新的 Agent 实例，不缓存，不与会话绑定
-func (s *AgentRuntimeService) GetAgent(ctx context.Context, agentID string) (*AgentWrapper, error) {
-	// 从数据库获取 Agent 配置
+// workDir 用于限制文件操作工具的操作范围，为空则使用当前目录
+func (s *AgentRuntimeService) GetAgent(ctx context.Context, agentID string, workDir string) (*AgentWrapper, error) {
 	agent, err := s.agentService.GetByID(agentID)
 	if err != nil {
 		return nil, fmt.Errorf("agent not found: %w", err)
 	}
 
-	// 获取或创建 ChatModel
 	chatModel, err := s.getOrCreateChatModel(ctx, agent.ProviderID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get chat model: %w", err)
 	}
 
-	// 解析工具列表
 	allowedTools := s.parseTools(agent.Tools)
 
-	// 创建新的 Agent 实例（无状态，每次新建）
 	opts := []iano.Option{
 		iano.WithSystemPrompt(agent.Instructions),
 	}
 	if len(allowedTools) > 0 {
 		opts = append(opts, iano.WithAllowedTools(allowedTools))
+	}
+	if workDir != "" {
+		opts = append(opts, iano.WithWorkDir(workDir))
 	}
 
 	agentInstance, err := iano.NewAgent(chatModel, opts...)
@@ -74,7 +74,6 @@ func (s *AgentRuntimeService) GetAgent(ctx context.Context, agentID string) (*Ag
 		return nil, fmt.Errorf("failed to create agent instance: %w", err)
 	}
 
-	// 加载动态工具
 	if err := s.loadToolsToAgent(ctx, agentInstance, agent); err != nil {
 		slog.Warn("Failed to load tools to agent", "agentID", agentID, "error", err)
 	}

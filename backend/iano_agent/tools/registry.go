@@ -422,3 +422,50 @@ func (r *ScopedRegistry) Merge(other Registry) error {
 	}
 	return nil
 }
+
+// CreateToolsWithBasePath 根据指定的基础路径创建工具实例
+// 用于限制文件操作工具的操作范围
+func CreateToolsWithBasePath(basePath string, toolNames []string) []tool.InvokableTool {
+	toolsList := make([]tool.InvokableTool, 0)
+	allowedMap := make(map[string]bool)
+	for _, name := range toolNames {
+		allowedMap[name] = true
+	}
+
+	for _, name := range toolNames {
+		var t tool.InvokableTool
+		switch name {
+		case "file_read":
+			t = NewFileReadTool(basePath)
+		case "file_write":
+			t = NewFileWriteTool(basePath)
+		case "file_list":
+			t = NewFileListTool(basePath)
+		case "file_delete":
+			t = NewFileDeleteTool(basePath)
+		case "file_info":
+			t = NewFileInfoTool(basePath)
+		case "grep_search":
+			t = NewGrepSearchTool(basePath)
+		case "grep_replace":
+			t = NewGrepReplaceTool(basePath)
+		case "archive_create":
+			t = NewArchiveCreateTool(basePath)
+		case "archive_extract":
+			t = NewArchiveExtractTool(basePath)
+		case "command_execute":
+			t = NewCommandExecuteTool().WithWorkingDir(basePath)
+		case "shell_execute":
+			t = NewShellExecuteTool().WithWorkingDir(basePath)
+		default:
+			if globalT, ok := GlobalRegistry.Get(name); ok {
+				t = globalT
+			}
+		}
+		if t != nil {
+			toolsList = append(toolsList, t)
+		}
+	}
+
+	return toolsList
+}

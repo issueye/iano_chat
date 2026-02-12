@@ -20,6 +20,7 @@ type Config struct {
 	MaxRounds    int
 	AllowedTools []string
 	SystemPrompt string
+	WorkDir      string
 }
 
 func DefaultConfig() *Config {
@@ -38,6 +39,7 @@ type Agent struct {
 	tokenUsage   *TokenUsage
 	maxRounds    int
 	toolRegistry tools.Registry
+	workDir      string
 }
 
 func NewAgent(chatModel model.ToolCallingChatModel, opts ...Option) (*Agent, error) {
@@ -51,6 +53,7 @@ func NewAgent(chatModel model.ToolCallingChatModel, opts ...Option) (*Agent, err
 		config:     cfg,
 		maxRounds:  cfg.MaxRounds,
 		tokenUsage: &TokenUsage{LastUpdated: time.Now()},
+		workDir:    cfg.WorkDir,
 	}
 
 	agent.toolRegistry = tools.NewScopedRegistry(tools.GlobalRegistry, cfg.AllowedTools)
@@ -64,7 +67,7 @@ func NewAgent(chatModel model.ToolCallingChatModel, opts ...Option) (*Agent, err
 	ra, err := react.NewAgent(ctx, &react.AgentConfig{
 		ToolCallingModel: chatModel,
 		ToolsConfig:      toolsConfig,
-		MaxStep:          30, // 增加最大步数，支持更多工具调用和推理轮次
+		MaxStep:          30,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create react agent: %w", err)
@@ -99,14 +102,17 @@ func (a *Agent) makeToolsConfig() (compose.ToolsNodeConfig, error) {
 		bts = a.toolRegistry.List()
 	}
 
-	// 转换为 BaseTool 类型
-	tools := make([]tool.BaseTool, 0, len(bts))
+	if a.workDir != "" {
+		bts = tools.CreateToolsWithBasePath(a.workDir, a.toolRegistry.Names())
+	}
+
+	toolsList := make([]tool.BaseTool, 0, len(bts))
 	for _, t := range bts {
-		tools = append(tools, t)
+		toolsList = append(toolsList, t)
 	}
 
 	return compose.ToolsNodeConfig{
-		Tools: tools,
+		Tools: toolsList,
 	}, nil
 }
 

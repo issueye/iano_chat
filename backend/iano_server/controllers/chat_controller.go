@@ -109,7 +109,8 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 	}
 
 	userMsg.NewID()
-	if err := userMsg.SetText(req.Message); err != nil {
+	err = userMsg.SetText(req.Message)
+	if err == nil {
 		userMsg.Content = req.Message
 	}
 	c.messageService.Create(userMsg)
@@ -133,7 +134,7 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 		return
 	}
 
-	agent, err := c.agentRuntimeService.GetAgent(ctx.Request.Context(), agentID)
+	agent, err := c.agentRuntimeService.GetAgent(ctx.Request.Context(), agentID, req.WorkDir)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
 		return
