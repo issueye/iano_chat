@@ -12,50 +12,11 @@ import (
 	"iano_script_engine/builtin"
 )
 
-// Executor 脚本执行器接口
-type Executor interface {
-	// Execute 执行脚本
-	Execute(ctx context.Context, script string, input map[string]interface{}) (*ExecutionResult, error)
-	// ExecuteWithTimeout 带超时的执行
-	ExecuteWithTimeout(script string, input map[string]interface{}, timeout time.Duration) (*ExecutionResult, error)
-	// Validate 验证脚本
-	Validate(script string) error
-}
-
-// ExecutionResult 执行结果
-type ExecutionResult struct {
-	Success  bool                `json:"success"`
-	Result   interface{}         `json:"result,omitempty"`
-	Error    string              `json:"error,omitempty"`
-	Logs     []builtin.LogEntry  `json:"logs,omitempty"`
-	Duration int64               `json:"duration_ms"`
-}
-
 // ScriptExecutor 脚本执行器实现
 type ScriptExecutor struct {
 	engine  Engine
 	modules []Module
 	config  *ExecutorConfig
-}
-
-// ExecutorConfig 执行器配置
-type ExecutorConfig struct {
-	DefaultTimeout time.Duration
-	MaxTimeout     time.Duration
-	EnableHTTP     bool
-	EnableUtils    bool
-	EnableURL      bool
-}
-
-// DefaultExecutorConfig 默认配置
-func DefaultExecutorConfig() *ExecutorConfig {
-	return &ExecutorConfig{
-		DefaultTimeout: 30 * time.Second,
-		MaxTimeout:     5 * time.Minute,
-		EnableHTTP:     true,
-		EnableUtils:    true,
-		EnableURL:      true,
-	}
 }
 
 // NewExecutor 创建脚本执行器
@@ -140,14 +101,14 @@ func (e *ScriptExecutor) Validate(script string) error {
 
 // SetGlobal 设置全局变量
 func (e *ScriptExecutor) SetGlobal(key string, value interface{}) {
-	if engine, ok := e.engine.(*EngineWithModules); ok {
+	if engine, ok := e.engine.(*GojaEngine); ok {
 		engine.SetGlobal(key, value)
 	}
 }
 
 // SetFunction 设置全局函数
 func (e *ScriptExecutor) SetFunction(name string, fn interface{}) {
-	if engine, ok := e.engine.(*EngineWithModules); ok {
+	if engine, ok := e.engine.(*GojaEngine); ok {
 		engine.SetFunction(name, fn)
 	}
 }
@@ -164,7 +125,7 @@ type HookScriptExecutor struct {
 }
 
 // NewHookScriptExecutor 创建 Hook 脚本执行器
-func NewHookScriptExecutor() *HookScriptExecutor {
+func NewHookScriptExecutor() HookExecutor {
 	config := &ExecutorConfig{
 		DefaultTimeout: 10 * time.Second,
 		MaxTimeout:     60 * time.Second,
@@ -195,7 +156,7 @@ type AgentScriptExecutor struct {
 }
 
 // NewAgentScriptExecutor 创建 Agent 脚本执行器
-func NewAgentScriptExecutor() *AgentScriptExecutor {
+func NewAgentScriptExecutor() AgentExecutor {
 	config := &ExecutorConfig{
 		DefaultTimeout: 30 * time.Second,
 		MaxTimeout:     5 * time.Minute,
@@ -270,28 +231,8 @@ type Sandbox struct {
 	limits   *SandboxLimits
 }
 
-// SandboxLimits 沙箱限制
-type SandboxLimits struct {
-	MaxExecutionTime time.Duration
-	MaxMemoryMB      int64
-	MaxOutputSize    int
-	AllowedModules   []string
-	BlockedFunctions []string
-}
-
-// DefaultSandboxLimits 默认沙箱限制
-func DefaultSandboxLimits() *SandboxLimits {
-	return &SandboxLimits{
-		MaxExecutionTime: 5 * time.Second,
-		MaxMemoryMB:      50,
-		MaxOutputSize:    1024 * 1024, // 1MB
-		AllowedModules:   []string{"utils", "url"},
-		BlockedFunctions: []string{"http", "eval", "Function"},
-	}
-}
-
 // NewSandbox 创建沙箱
-func NewSandbox(limits *SandboxLimits) *Sandbox {
+func NewSandbox(limits *SandboxLimits) SandboxExecutor {
 	if limits == nil {
 		limits = DefaultSandboxLimits()
 	}

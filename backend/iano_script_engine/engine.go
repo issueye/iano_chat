@@ -15,56 +15,32 @@ import (
 	"iano_script_engine/builtin"
 )
 
-// Engine 脚本引擎接口
-type Engine interface {
-	// Execute 执行脚本
-	Execute(ctx context.Context, script string, input map[string]interface{}) (*Result, error)
-	// ExecuteWithTimeout 带超时的执行
-	ExecuteWithTimeout(script string, input map[string]interface{}, timeout time.Duration) (*Result, error)
-	// Validate 验证脚本语法
-	Validate(script string) error
-	// SetGlobal 设置全局变量
-	SetGlobal(key string, value interface{})
-	// SetFunction 设置全局函数
-	SetFunction(name string, fn interface{})
-}
-
-// Result 脚本执行结果
-type Result struct {
-	Success bool              `json:"success"`
-	Value   interface{}       `json:"value,omitempty"`
-	Error   string            `json:"error,omitempty"`
-	Logs    []builtin.LogEntry `json:"logs,omitempty"`
-}
-
-// Config 脚本引擎配置
-type Config struct {
-	// Timeout 默认执行超时
-	Timeout time.Duration
-	// MemoryLimit 内存限制 (字节)
-	MemoryLimit uint64
-	// MaxCallStackSize 最大调用栈深度
-	MaxCallStackSize int
-}
-
-// DefaultConfig 默认配置
-func DefaultConfig() *Config {
-	return &Config{
-		Timeout:          30 * time.Second,
-		MemoryLimit:      10 * 1024 * 1024, // 10MB
-		MaxCallStackSize: 1000,
-	}
-}
-
 // GojaEngine goja 脚本引擎实现
 type GojaEngine struct {
 	config  *Config
 	globals map[string]interface{}
 	funcs   map[string]interface{}
+	modules []Module
 }
 
-// NewEngine 创建新的脚本引擎
+// NewEngine 创建新的脚本引擎（带默认模块）
 func NewEngine(config *Config) Engine {
+	if config == nil {
+		config = DefaultConfig()
+	}
+
+	// 默认启用所有模块
+	modules := []Module{
+		builtin.NewHTTPModule(config.Timeout),
+		builtin.NewUtilsModule(),
+		builtin.NewURLModule(),
+	}
+
+	return NewEngineWithModules(config, modules...)
+}
+
+// NewEngineWithModules 创建带自定义模块的脚本引擎
+func NewEngineWithModules(config *Config, modules ...Module) Engine {
 	if config == nil {
 		config = DefaultConfig()
 	}
@@ -73,6 +49,7 @@ func NewEngine(config *Config) Engine {
 		config:  config,
 		globals: make(map[string]interface{}),
 		funcs:   make(map[string]interface{}),
+		modules: modules,
 	}
 }
 
@@ -125,6 +102,15 @@ func (e *GojaEngine) executeWithContext(ctx context.Context, script string, inpu
 	// 注入全局函数
 	for name, fn := range e.funcs {
 		vm.Set(name, fn)
+	}
+
+	// 注入模块
+	for _, module := range e.modules {
+		if err := module.Register(vm); err != nil {
+			result.Success = false
+			result.Error = fmt.Sprintf("failed to register module %s: %v", module.Name(), err)
+			return result, nil
+		}
 	}
 
 	// 先执行脚本以定义 ScriptRun 函数
