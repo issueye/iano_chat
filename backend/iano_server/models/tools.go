@@ -44,19 +44,19 @@ type ToolDefinition struct {
 
 type Tool struct {
 	BaseModel
-	Name          string     `gorm:"size:255;not null" json:"name"`
-	Desc          string     `gorm:"type:text" json:"desc"`
-	Returns       string     `gorm:"type:text" json:"returns"`           // 返回值描述
-	Example       string     `gorm:"type:text" json:"example,omitempty"` // 使用示例
-	Type          ToolType   `gorm:"size:20" json:"type"`
-	Status        ToolStatus `gorm:"size:20;default:'enabled'" json:"status"`
-	ScriptContent string     `gorm:"type:text" json:"script_content,omitempty"` // 脚本内容（仅对脚本工具）
-	CallCount     int64      `json:"call_count" gorm:"default:0"`               // 调用次数
-	ErrorCount    int64      `json:"error_count" gorm:"default:0"`              // 错误次数
-	Config        string     `json:"config" gorm:"type:text"`                   // 工具配置（JSON）
-	Parameters    string     `json:"parameters" gorm:"type:text"`               // 参数定义（JSON）
-	Version       string     `json:"version" gorm:"default:1.0.0"`              // 版本
-	Author        string     `json:"author"`                                    // 作者
+	Name          string     `gorm:"column:name;size:255;not null" json:"name"`
+	Desc          string     `gorm:"column:desc;type:text" json:"desc"`
+	Returns       string     `gorm:"column:returns;type:text" json:"returns"`           // 返回值描述
+	Example       string     `gorm:"column:example;type:text" json:"example,omitempty"` // 使用示例
+	Type          ToolType   `gorm:"column:type;size:20" json:"type"`
+	Status        ToolStatus `gorm:"column:status;size:20;default:'enabled'" json:"status"`
+	ScriptContent string     `gorm:"column:script_content;type:text" json:"script_content,omitempty"` // 脚本内容（仅对脚本工具）
+	CallCount     int64      `gorm:"column:call_count;default:0" json:"call_count"`                   // 调用次数
+	ErrorCount    int64      `gorm:"column:error_count;default:0" json:"error_count"`                 // 错误次数
+	Config        string     `gorm:"column:config;type:text" json:"config,omitempty"`                 // 工具配置（JSON）
+	Parameters    string     `gorm:"column:parameters;type:text" json:"parameters,omitempty"`         // 参数定义（JSON）
+	Version       string     `gorm:"column:version;default:1.0.0" json:"version"`                     // 版本
+	Author        string     `gorm:"column:author" json:"author"`                                     // 作者
 }
 
 func (table *Tool) TableName() string {

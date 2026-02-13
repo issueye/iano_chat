@@ -245,7 +245,6 @@ function handleCancel() {
  * 提交表单
  */
 async function handleSubmit() {
-  console.log("handleSubmit");
   // 执行前置验证
   if (props.beforeSubmit) {
     const valid = await props.beforeSubmit(form.value, isEdit.value);

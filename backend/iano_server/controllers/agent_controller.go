@@ -21,15 +21,15 @@ func NewAgentController(agentService *services.AgentService, runtimeService *ser
 }
 
 type CreateAgentRequest struct {
-	Name         string `json:"name" example:"助手"`
-	Description  string `json:"description" example:"通用助手"`
-	Type         string `json:"type" example:"main"`
-	IsSubAgent   bool   `json:"is_sub_agent" example:"false"`
-	ProviderID   string `json:"provider_id" example:"provider-001"`
-	Model        string `json:"model" example:"gpt-4"`
-	Instructions string `json:"instructions" example:"你是一个智能助手"`
-	Tools        string `json:"tools" example:"file_read,file_write"`
-	McpServerID  string `json:"mcp_server_id" example:"mcp-001"` // 关联的 MCP 服务器 ID
+	Name         string   `json:"name" example:"助手"`
+	Description  string   `json:"description" example:"通用助手"`
+	Type         string   `json:"type" example:"main"`
+	IsSubAgent   bool     `json:"is_sub_agent" example:"false"`
+	ProviderID   string   `json:"provider_id" example:"provider-001"`
+	Model        string   `json:"model" example:"gpt-4"`
+	Instructions string   `json:"instructions" example:"你是一个智能助手"`
+	Tools        string   `json:"tools" example:"file_read,file_write"`
+	McpServerIDs []string `json:"mcp_server_ids" example:"mcp-001"` // 关联的 MCP 服务器 ID
 }
 
 type UpdateAgentRequest struct {
@@ -71,7 +71,7 @@ func (c *AgentController) Create(ctx *web.Context) {
 		Model:        req.Model,
 		Instructions: req.Instructions,
 		Tools:        req.Tools,
-		MCPServers:   req.McpServerID,
+		MCPServerIDs: req.McpServerIDs,
 	}
 	if err := c.agentService.Create(agent); err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))

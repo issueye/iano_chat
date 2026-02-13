@@ -12,15 +12,15 @@ const (
 // Agent Agent 模型
 type Agent struct {
 	BaseModel
-	Name         string    `json:"name"`
-	Description  string    `json:"description"`
+	Name         string    `gorm:"column:name" json:"name"`
+	Description  string    `gorm:"column:description" json:"description"`
 	Type         AgentType `gorm:"size:20;default:'main'" json:"type"`
 	IsSubAgent   bool      `gorm:"default:false" json:"is_sub_agent"`
-	ProviderID   string    `json:"provider_id"`
-	Model        string    `json:"model"`
-	Instructions string    `gorm:"type:text" json:"instructions"`
-	Tools        string    `gorm:"type:text" json:"tools"`
-	MCPServers   string    `gorm:"type:text" json:"mcp_servers"`
+	ProviderID   string    `gorm:"column:provider_id" json:"provider_id"`
+	Model        string    `gorm:"column:model" json:"model"`
+	Instructions string    `gorm:"column:instructions;type:text" json:"instructions"`
+	Tools        string    `gorm:"column:tools;type:text" json:"tools"`
+	MCPServerIDs []string  `gorm:"column:mcp_server_ids;type:text" json:"mcp_server_ids"`
 }
 
 func (Agent) TableName() string {

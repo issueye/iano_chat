@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	iano "iano_agent"
 	script_engine "iano_script_engine"
@@ -244,21 +245,12 @@ func (s *AgentRuntimeService) parseMCPServers(mcpServersStr string) []string {
 		return nil
 	}
 
-	var servers []string
-	if err := json.Unmarshal([]byte(mcpServersStr), &servers); err != nil {
-		return []string{mcpServersStr}
-	}
-	return servers
+	return strings.Split(mcpServersStr, ",")
 }
 
 // loadMCPToolsToAgent 加载 MCP 工具到 Agent
-func (s *AgentRuntimeService) loadMCPToolsToAgent(ctx context.Context, agent *iano.Agent, config *models.Agent) error {
-	mcpServers := s.parseMCPServers(config.MCPServers)
-	if len(mcpServers) == 0 {
-		return nil
-	}
-
-	for _, serverID := range mcpServers {
+func (s *AgentRuntimeService) loadMCPToolsToAgent(_ context.Context, agent *iano.Agent, config *models.Agent) error {
+	for _, serverID := range config.MCPServerIDs {
 		server, err := s.mcpService.ServerService.GetByID(serverID)
 		if err != nil {
 			slog.Warn("MCP Server not found", "serverID", serverID, "error", err)

@@ -48,13 +48,13 @@ func DefaultSessionConfig() *SessionConfig {
 // Session 会话模型
 type Session struct {
 	BaseModel
-	Title        string         `gorm:"size:255;not null;default:'新会话'" json:"title"`
-	Status       SessionStatus  `gorm:"size:20;default:'active'" json:"status"`
-	ConfigJSON   string         `gorm:"type:text" json:"-"`
-	MessageCount int            `gorm:"default:0" json:"message_count"`
-	TotalTokens  int            `gorm:"default:0" json:"total_tokens"`
-	LastActiveAt JSONTime       `json:"last_active_at"`
-	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+	Title        string         `gorm:"column:title;size:255;not null;default:'新会话'" json:"title"`
+	Status       SessionStatus  `gorm:"column:status;size:20;default:'active'" json:"status"`
+	ConfigJSON   string         `gorm:"column:config_json;type:text" json:"-"`
+	MessageCount int            `gorm:"column:message_count;default:0" json:"message_count"`
+	TotalTokens  int            `gorm:"column:total_tokens;default:0" json:"total_tokens"`
+	LastActiveAt JSONTime       `gorm:"column:last_active_at" json:"last_active_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"column:deleted_at;index" json:"-"`
 }
 
 // TableName 返回表名

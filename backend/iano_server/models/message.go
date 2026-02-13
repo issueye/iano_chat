@@ -45,8 +45,8 @@ type ToolCall struct {
 }
 
 type ContentBlock struct {
-	Type     string    `json:"type"`               // "text" 或 "tool_call"
-	Text     string    `json:"text,omitempty"`     // 当 type 为 "text" 时
+	Type     string    `json:"type"`                // "text" 或 "tool_call"
+	Text     string    `json:"text,omitempty"`      // 当 type 为 "text" 时
 	ToolCall *ToolCall `json:"tool_call,omitempty"` // 当 type 为 "tool_call" 时
 }
 
@@ -69,16 +69,16 @@ type MessageContent struct {
 // Message 消息模型
 type Message struct {
 	BaseModel
-	SessionID       string          `gorm:"not null" json:"session_id"`
-	Type            MessageType     `gorm:"size:20;not null" json:"type"`
-	Content         string          `gorm:"type:text;not null" json:"content"`
-	Status          MessageStatus   `gorm:"size:20;default:'completed'" json:"status"`
-	InputTokens     int             `gorm:"default:0" json:"input_tokens"`
-	OutputTokens    int             `gorm:"default:0" json:"output_tokens"`
-	ParentID        *string         `gorm:"size:36;index" json:"parent_id,omitempty"`
-	FeedbackRating  *FeedbackRating `gorm:"size:10" json:"feedback_rating,omitempty"`
-	FeedbackComment string          `gorm:"type:text" json:"feedback_comment,omitempty"`
-	FeedbackAt      *JSONTime       `json:"feedback_at,omitempty"`
+	SessionID       string          `gorm:"column:session_id;not null" json:"session_id"`
+	Type            MessageType     `gorm:"column:type;size:20;not null" json:"type"`
+	Content         string          `gorm:"column:content;type:text;not null" json:"content"`
+	Status          MessageStatus   `gorm:"column:status;size:20;default:'completed'" json:"status"`
+	InputTokens     int             `gorm:"column:input_tokens;default:0" json:"input_tokens"`
+	OutputTokens    int             `gorm:"column:output_tokens;default:0" json:"output_tokens"`
+	ParentID        *string         `gorm:"column:parent_id;size:36;index" json:"parent_id,omitempty"`
+	FeedbackRating  *FeedbackRating `gorm:"column:feedback_rating;size:10" json:"feedback_rating,omitempty"`
+	FeedbackComment string          `gorm:"column:feedback_comment;type:text" json:"feedback_comment,omitempty"`
+	FeedbackAt      *JSONTime       `gorm:"column:feedback_at" json:"feedback_at,omitempty"`
 }
 
 // TableName 返回表名
