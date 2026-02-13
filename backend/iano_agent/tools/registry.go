@@ -145,7 +145,7 @@ func GetBuiltinTools(ctx context.Context) (map[string]tool.BaseTool, error) {
 	if err != nil {
 		return nil, fmt.Errorf("创建 DuckDuckGo 工具失败: %w", err)
 	}
-	toolsMap["web_search"] = ddgTool
+	toolsMap["web_search"] = ddgTool.tool
 
 	httpTool := &HTTPClientTool{}
 	toolsMap["http_request"] = httpTool
@@ -185,7 +185,7 @@ func RegisterBuiltinTools(ctx context.Context, workDir string, timeout int) erro
 	if err != nil {
 		return fmt.Errorf("创建 DuckDuckGo 工具失败: %w", err)
 	}
-	if err := GlobalRegistry.Register("web_search", ddgTool); err != nil {
+	if err := GlobalRegistry.Register("web_search", ddgTool.tool); err != nil {
 		return fmt.Errorf("注册 DuckDuckGo 工具失败: %w", err)
 	}
 
