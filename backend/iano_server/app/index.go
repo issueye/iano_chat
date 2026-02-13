@@ -1,12 +1,13 @@
 package app
 
 import (
+	"context"
+	"iano_server/container"
 	"iano_server/models"
 	"iano_server/pkg/config"
 	"iano_server/pkg/database"
 	"iano_server/pkg/logger"
 	"iano_server/routes"
-	"iano_server/services"
 	web "iano_web"
 	"log/slog"
 	"os"
@@ -17,20 +18,25 @@ import (
 	"gorm.io/gorm"
 )
 
-type App struct {
-	AppName    string // 应用名称
-	Version    string // 应用版本
-	RootPath   string // 应用根目录
-	ConfigPath string // 配置文件路径
+var (
+	AppInstance *App
+)
 
-	DB           *gorm.DB               // 数据库连接
-	cfg          *config.Config         // 配置
-	Log          *slog.Logger           // 日志
-	WebEngine    *web.Engine            // Web引擎
-	AgentService *services.AgentService // Agent服务
+type App struct {
+	AppName    string          // 应用名称
+	Version    string          // 应用版本
+	RootPath   string          // 应用根目录
+	ConfigPath string          // 配置文件路径
+	Ctx        context.Context // 上下文
+
+	DB        *gorm.DB             // 数据库连接
+	cfg       *config.Config       // 配置
+	Log       *slog.Logger         // 日志
+	WebEngine *web.Engine          // Web引擎
+	Container *container.Container // 容器
 }
 
-func NewApp(rootPath string, configPath string) (*App, error) {
+func NewApp(ctx context.Context, rootPath string, configPath string) (*App, error) {
 	a := &App{
 		RootPath:   rootPath,
 		ConfigPath: configPath,
@@ -50,6 +56,9 @@ func NewApp(rootPath string, configPath string) (*App, error) {
 	if err := a.InitDB(); err != nil {
 		return nil, err
 	}
+
+	// 初始化容器
+	a.Container = container.NewContainer(ctx, a.DB, a.cfg)
 
 	return a, nil
 }
@@ -108,8 +117,7 @@ func (a *App) InitRootDirs() error {
 }
 
 func (a *App) Start() error {
-	a.AgentService = services.NewAgentService(a.DB)
-	a.WebEngine = routes.SetupRoutes(a.DB, a.cfg)
+	a.WebEngine = routes.SetupRoutes(a.Container)
 	a.WebEngine.Start()
 	a.Log.Info("服务启动", slog.String("port", a.cfg.Server.Port))
 	if err := a.WebEngine.Run(":" + a.cfg.Server.Port); err != nil {

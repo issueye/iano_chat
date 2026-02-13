@@ -204,6 +204,8 @@ export const useMessageStore = defineStore('message', () => {
         if (done) break
 
         const chunk = decoder.decode(value, { stream: true })
+        console.log('chunk', chunk);
+        
         const lines = chunk.split('\n')
 
         for (const line of lines) {

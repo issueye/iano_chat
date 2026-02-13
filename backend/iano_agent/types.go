@@ -11,7 +11,19 @@ type ToolCallInfo struct {
 	Arguments string `json:"arguments"`
 }
 
-type MessageCallback func(content string, isToolCall bool, toolCalls *ToolCallInfo, reasoning string)
+type Message struct {
+	Role             string        `json:"role"`
+	Content          string        `json:"content"`
+	ReasoningContent string        `json:"reasoning_content"`
+	ThinkContent     string        `json:"think_content"`
+	ToolCall         *ToolCallInfo `json:"tool_call"`
+	CallToolError    string        `json:"call_tool_error"`
+	IsThink          bool          `json:"is_think"`
+	IsReasoning      bool          `json:"is_reasoning"`
+	IsToolCall       bool          `json:"is_tool_call"`
+}
+
+type MessageCallback func(msg *Message)
 
 type TokenUsage struct {
 	TotalTokens      int64

@@ -4,21 +4,17 @@ import (
 	"net/http"
 	"time"
 
-	"iano_server/controllers"
+	"iano_server/container"
 	"iano_server/docs"
-	"iano_server/pkg/config"
-	"iano_server/services"
 	web "iano_web"
 	webMiddleware "iano_web/middleware"
-
-	"gorm.io/gorm"
 )
 
-func SetupRoutes(db *gorm.DB, cfg *config.Config) *web.Engine {
+func SetupRoutes(cnr *container.Container) *web.Engine {
 	engine := web.New()
-	engine.SetMode(cfg.Server.Mode)
-	engine.SetReadTimeout(time.Duration(cfg.Server.ReadTimeout) * time.Second)
-	engine.SetWriteTimeout(time.Duration(cfg.Server.WriteTimeout) * time.Second)
+	engine.SetMode(cnr.GetConfig().Server.Mode)
+	engine.SetReadTimeout(time.Duration(cnr.GetConfig().Server.ReadTimeout) * time.Second)
+	engine.SetWriteTimeout(time.Duration(cnr.GetConfig().Server.WriteTimeout) * time.Second)
 	engine.SetGracefulShutdown(true)
 
 	engine.Use(webMiddleware.CORS())
@@ -28,7 +24,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *web.Engine {
 	docs.SwaggerInfo.Title = "IANO Chat API"
 	docs.SwaggerInfo.Description = "IANO Chat 是一个智能对话系统，支持多 Agent、工具调用、流式响应等功能。"
 	docs.SwaggerInfo.Version = "1.0"
-	docs.SwaggerInfo.Host = "localhost:" + cfg.Server.Port
+	docs.SwaggerInfo.Host = "localhost:" + cnr.GetConfig().Server.Port
 	docs.SwaggerInfo.BasePath = "/"
 	docs.SwaggerInfo.Schemes = []string{"http", "https"}
 
@@ -75,86 +71,69 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *web.Engine {
 		c.Writer.Write([]byte(html))
 	})
 
-	agentService := services.NewAgentService(db)
-	messageService := services.NewMessageService(db)
-	sessionService := services.NewSessionService(db)
-	toolService := services.NewToolService(db)
-	providerService := services.NewProviderService(db)
-	mcpService := services.NewMCPService(db)
-	agentRuntimeService := services.NewAgentRuntimeServiceWithMCP(db, agentService, providerService, toolService, mcpService)
-
-	agentController := controllers.NewAgentController(agentService, agentRuntimeService)
-	messageController := controllers.NewMessageController(messageService)
-	sessionController := controllers.NewSessionController(sessionService)
-	toolController := controllers.NewToolController(toolService)
-	providerController := controllers.NewProviderController(providerService)
-	chatController := controllers.NewChatController(agentService, providerService, messageService, agentRuntimeService)
-	mcpController := controllers.NewMCPController(mcpService)
-	baseController := &controllers.BaseController{}
-
 	engine.GET("/health", func(c *web.Context) {
-		baseController.HealthCheck(c)
+		cnr.BaseController.HealthCheck(c)
 	})
 
-	engine.POST("/api/tools", toolController.Create)
-	engine.GET("/api/tools", toolController.GetAll)
-	engine.GET("/api/tools/type", toolController.GetByType)
-	engine.GET("/api/tools/status", toolController.GetByStatus)
-	engine.GET("/api/tools/:id", toolController.GetByID)
-	engine.PUT("/api/tools/:id", toolController.Update)
-	engine.PUT("/api/tools/:id/config", toolController.UpdateConfig)
-	engine.DELETE("/api/tools/:id", toolController.Delete)
-	engine.GET("/api/tools/:id/test", toolController.Test)
+	engine.POST("/api/tools", cnr.ToolController.Create)
+	engine.GET("/api/tools", cnr.ToolController.GetAll)
+	engine.GET("/api/tools/type", cnr.ToolController.GetByType)
+	engine.GET("/api/tools/status", cnr.ToolController.GetByStatus)
+	engine.GET("/api/tools/:id", cnr.ToolController.GetByID)
+	engine.PUT("/api/tools/:id", cnr.ToolController.Update)
+	engine.PUT("/api/tools/:id/config", cnr.ToolController.UpdateConfig)
+	engine.DELETE("/api/tools/:id", cnr.ToolController.Delete)
+	engine.GET("/api/tools/:id/test", cnr.ToolController.Test)
 
-	engine.POST("/api/agents", agentController.Create)
-	engine.GET("/api/agents", agentController.GetAll)
-	engine.GET("/api/agents/type", agentController.GetByType)
-	engine.GET("/api/agents/:id", agentController.GetByID)
-	engine.PUT("/api/agents/:id", agentController.Update)
-	engine.DELETE("/api/agents/:id", agentController.Delete)
-	engine.POST("/api/agents/:id/tools", agentController.AddTool)
-	engine.DELETE("/api/agents/:id/tools/:tool_name", agentController.RemoveTool)
+	engine.POST("/api/agents", cnr.AgentController.Create)
+	engine.GET("/api/agents", cnr.AgentController.GetAll)
+	engine.GET("/api/agents/type", cnr.AgentController.GetByType)
+	engine.GET("/api/agents/:id", cnr.AgentController.GetByID)
+	engine.PUT("/api/agents/:id", cnr.AgentController.Update)
+	engine.DELETE("/api/agents/:id", cnr.AgentController.Delete)
+	engine.POST("/api/agents/:id/tools", cnr.AgentController.AddTool)
+	engine.DELETE("/api/agents/:id/tools/:tool_name", cnr.AgentController.RemoveTool)
 
-	engine.POST("/api/messages", messageController.Create)
-	engine.GET("/api/messages", messageController.GetAll)
-	engine.GET("/api/messages/session", messageController.GetBySessionID)
-	engine.GET("/api/messages/type", messageController.GetByType)
-	engine.GET("/api/messages/:id", messageController.GetByID)
-	engine.PUT("/api/messages/:id", messageController.Update)
-	engine.DELETE("/api/messages/:id", messageController.Delete)
-	engine.POST("/api/messages/:id/feedback", messageController.AddFeedback)
-	engine.DELETE("/api/messages", messageController.DeleteBySessionID)
+	engine.POST("/api/messages", cnr.MessageController.Create)
+	engine.GET("/api/messages", cnr.MessageController.GetAll)
+	engine.GET("/api/messages/session", cnr.MessageController.GetBySessionID)
+	engine.GET("/api/messages/type", cnr.MessageController.GetByType)
+	engine.GET("/api/messages/:id", cnr.MessageController.GetByID)
+	engine.PUT("/api/messages/:id", cnr.MessageController.Update)
+	engine.DELETE("/api/messages/:id", cnr.MessageController.Delete)
+	engine.POST("/api/messages/:id/feedback", cnr.MessageController.AddFeedback)
+	engine.DELETE("/api/messages", cnr.MessageController.DeleteBySessionID)
 
-	engine.POST("/api/sessions", sessionController.Create)
-	engine.GET("/api/sessions", sessionController.GetAll)
-	engine.GET("/api/sessions/status", sessionController.GetByStatus)
-	engine.GET("/api/sessions/:id", sessionController.GetByID)
-	engine.PUT("/api/sessions/:id", sessionController.Update)
-	engine.DELETE("/api/sessions/:id", sessionController.Delete)
-	engine.GET("/api/sessions/:id/config", sessionController.GetConfig)
-	engine.PUT("/api/sessions/:id/config", sessionController.UpdateConfig)
+	engine.POST("/api/sessions", cnr.SessionController.Create)
+	engine.GET("/api/sessions", cnr.SessionController.GetAll)
+	engine.GET("/api/sessions/status", cnr.SessionController.GetByStatus)
+	engine.GET("/api/sessions/:id", cnr.SessionController.GetByID)
+	engine.PUT("/api/sessions/:id", cnr.SessionController.Update)
+	engine.DELETE("/api/sessions/:id", cnr.SessionController.Delete)
+	engine.GET("/api/sessions/:id/config", cnr.SessionController.GetConfig)
+	engine.PUT("/api/sessions/:id/config", cnr.SessionController.UpdateConfig)
 
-	engine.POST("/api/providers", providerController.Create)
-	engine.GET("/api/providers", providerController.GetAll)
-	engine.GET("/api/providers/default", providerController.GetDefault)
-	engine.GET("/api/providers/:id", providerController.GetByID)
-	engine.PUT("/api/providers/:id", providerController.Update)
-	engine.DELETE("/api/providers/:id", providerController.Delete)
+	engine.POST("/api/providers", cnr.ProviderController.Create)
+	engine.GET("/api/providers", cnr.ProviderController.GetAll)
+	engine.GET("/api/providers/default", cnr.ProviderController.GetDefault)
+	engine.GET("/api/providers/:id", cnr.ProviderController.GetByID)
+	engine.PUT("/api/providers/:id", cnr.ProviderController.Update)
+	engine.DELETE("/api/providers/:id", cnr.ProviderController.Delete)
 
-	engine.POST("/api/chat/stream", chatController.StreamChat)
-	engine.DELETE("/api/chat/session/:session_id", chatController.ClearSession)
+	engine.POST("/api/chat/stream", cnr.ChatController.StreamChat)
+	engine.DELETE("/api/chat/session/:session_id", cnr.ChatController.ClearSession)
 
-	engine.POST("/api/mcp/servers", mcpController.CreateServer)
-	engine.GET("/api/mcp/servers", mcpController.GetAllServers)
-	engine.GET("/api/mcp/servers/:id", mcpController.GetServerByID)
-	engine.PUT("/api/mcp/servers/:id", mcpController.UpdateServer)
-	engine.DELETE("/api/mcp/servers/:id", mcpController.DeleteServer)
-	engine.POST("/api/mcp/servers/connect", mcpController.ConnectServer)
-	engine.POST("/api/mcp/servers/:id/disconnect", mcpController.DisconnectServer)
-	engine.GET("/api/mcp/servers/:id/tools", mcpController.GetServerTools)
-	engine.GET("/api/mcp/servers/:id/list-tools", mcpController.ListTools)
-	engine.GET("/api/mcp/servers/:id/ping", mcpController.Ping)
-	engine.POST("/api/mcp/tools/call", mcpController.CallTool)
+	engine.POST("/api/mcp/servers", cnr.MCPController.CreateServer)
+	engine.GET("/api/mcp/servers", cnr.MCPController.GetAllServers)
+	engine.GET("/api/mcp/servers/:id", cnr.MCPController.GetServerByID)
+	engine.PUT("/api/mcp/servers/:id", cnr.MCPController.UpdateServer)
+	engine.DELETE("/api/mcp/servers/:id", cnr.MCPController.DeleteServer)
+	engine.POST("/api/mcp/servers/connect", cnr.MCPController.ConnectServer)
+	engine.POST("/api/mcp/servers/:id/disconnect", cnr.MCPController.DisconnectServer)
+	engine.GET("/api/mcp/servers/:id/tools", cnr.MCPController.GetServerTools)
+	engine.GET("/api/mcp/servers/:id/list-tools", cnr.MCPController.ListTools)
+	engine.GET("/api/mcp/servers/:id/ping", cnr.MCPController.Ping)
+	engine.POST("/api/mcp/tools/call", cnr.MCPController.CallTool)
 
 	return engine
 }

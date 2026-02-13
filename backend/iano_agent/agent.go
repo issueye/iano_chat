@@ -46,6 +46,10 @@ type Agent struct {
 	workDir         string
 	timeout         int
 	allowedCommands []string
+	IsThink         bool              // 是否在思考中
+	IsReasoning     bool              // 是否在推理中
+	CBs             []MessageCallback // 回调函数
+	IsDone          bool              // 是否完成
 }
 
 func NewAgent(chatModel model.ToolCallingChatModel, opts ...Option) (*Agent, error) {
@@ -62,6 +66,7 @@ func NewAgent(chatModel model.ToolCallingChatModel, opts ...Option) (*Agent, err
 		workDir:         cfg.WorkDir,
 		timeout:         cfg.Timeout,
 		allowedCommands: cfg.AllowedCommands,
+		CBs:             make([]MessageCallback, 0),
 	}
 
 	agent.toolRegistry = tools.NewScopedRegistry(tools.GlobalRegistry, cfg.AllowedTools)
@@ -164,4 +169,11 @@ func (a *Agent) ClearHistory() {
 
 func (a *Agent) GetToolRegistry() tools.Registry {
 	return a.toolRegistry
+}
+
+func (a *Agent) AppendCB(cb MessageCallback) {
+	if cb == nil {
+		return
+	}
+	a.CBs = append(a.CBs, cb)
 }

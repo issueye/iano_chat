@@ -19,6 +19,7 @@ type ChatController struct {
 	providerService     *services.ProviderService
 	messageService      *services.MessageService
 	agentRuntimeService *services.AgentRuntimeService
+	agentSSEClientMap   *services.AgentSSEClientMap
 }
 
 func NewChatController(
@@ -26,12 +27,14 @@ func NewChatController(
 	providerService *services.ProviderService,
 	messageService *services.MessageService,
 	agentRuntimeService *services.AgentRuntimeService,
+	agentSSEClientMap *services.AgentSSEClientMap,
 ) *ChatController {
 	return &ChatController{
 		agentService:        agentService,
 		providerService:     providerService,
 		messageService:      messageService,
 		agentRuntimeService: agentRuntimeService,
+		agentSSEClientMap:   agentSSEClientMap,
 	}
 }
 
@@ -109,168 +112,112 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 		return
 	}
 
+	// 检查会话是否存在
+	if !c.agentSSEClientMap.CheckSession(req.SessionID) {
+		c.agentSSEClientMap.CreateSession(req.SessionID)
+	}
+
 	agentID := req.AgentID
 	if agentID == "" {
 		agentID = "default"
 	}
 
-	userMsg := &models.Message{
-		SessionID: req.SessionID,
-		Type:      models.MessageTypeUser,
-		Status:    models.MessageStatusCompleted,
-	}
-
-	userMsg.NewID()
-	err = userMsg.SetText(req.Message)
-	if err == nil {
-		userMsg.Content = req.Message
-	}
-	c.messageService.Create(userMsg)
-
-	sse.EmitEvent("message_created", map[string]interface{}{
-		"type":       "user",
-		"id":         userMsg.ID,
-		"session_id": userMsg.SessionID,
-		"content":    userMsg.Content,
-		"created_at": userMsg.CreatedAt,
-	})
-
-	assistantMsg := &models.Message{
-		SessionID: req.SessionID,
-		Type:      models.MessageTypeAssistant,
-		Status:    models.MessageStatusStreaming,
-	}
-	assistantMsg.NewID()
-
-	sse.EmitEvent("message_created", map[string]interface{}{
-		"type":       "assistant",
-		"id":         assistantMsg.ID,
-		"session_id": assistantMsg.SessionID,
-		"content":    JSONString(map[string]interface{}{"blocks": []interface{}{}, "text": "", "tool_calls": []interface{}{}}),
-		"status":     "streaming",
-		"created_at": assistantMsg.CreatedAt,
-	})
-
-	var accumulatedContent string
-	var accumulatedToolCalls []models.ToolCall
-	var contentBlocks []models.ContentBlock
-	var accumulatedReasoning string
-	callback := func(content string, isToolCall bool, toolCalls *iano.ToolCallInfo, reasoning string) {
-		if reasoning != "" {
-			accumulatedReasoning = reasoning
-			sse.EmitEvent("reasoning", map[string]interface{}{
-				"reasoning": reasoning,
-			})
+	// 检查 Agent 是否已绑定
+	if !c.agentSSEClientMap.CheckAgent(req.SessionID) {
+		// 创建用户消息
+		userMsg := &models.Message{
+			SessionID: req.SessionID,
+			Type:      models.MessageTypeUser,
+			Status:    models.MessageStatusCompleted,
 		}
 
-		if isToolCall && toolCalls != nil {
-			toolCall := models.ToolCall{
-				ID:   toolCalls.ID,
-				Type: "function",
-				Function: models.Function{
-					Name:      toolCalls.Name,
-					Arguments: toolCalls.Arguments,
-				},
-			}
-			accumulatedToolCalls = append(accumulatedToolCalls, toolCall)
-
-			contentBlocks = append(contentBlocks, models.ContentBlock{
-				Type:     "tool_call",
-				ToolCall: &toolCall,
-			})
-
-			sse.EmitEvent("content_block", map[string]interface{}{
-				"type": "tool_call",
-				"tool_call": map[string]interface{}{
-					"id":        toolCalls.ID,
-					"name":      toolCalls.Name,
-					"arguments": toolCalls.Arguments,
-				},
-			})
+		userMsg.NewID()
+		err = userMsg.SetText(req.Message)
+		if err == nil {
+			userMsg.Content = req.Message
 		}
+		c.messageService.Create(userMsg)
 
-		if content != "" {
-			accumulatedContent += content
-
-			if len(contentBlocks) > 0 && contentBlocks[len(contentBlocks)-1].Type == "text" {
-				contentBlocks[len(contentBlocks)-1].Text += content
-			} else {
-				contentBlocks = append(contentBlocks, models.ContentBlock{
-					Type: "text",
-					Text: content,
-				})
-			}
-
-			sse.EmitEvent("content_block", map[string]interface{}{
-				"type": "text",
-				"text": content,
-			})
+		// 创建助手消息
+		assistantMsg := &models.Message{
+			SessionID: req.SessionID,
+			Type:      models.MessageTypeAssistant,
+			Status:    models.MessageStatusCompleted,
 		}
-	}
-
-	historyMessages, err := c.messageService.GetBySessionID(req.SessionID)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
-		return
-	}
-
-	agent, err := c.agentRuntimeService.GetAgent(ctx.Request.Context(), agentID, req.WorkDir)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
-		return
-	}
-
-	chatMessages := make([]*schema.Message, 0, len(historyMessages))
-	for _, msg := range historyMessages {
-		switch msg.Type {
-		case models.MessageTypeUser:
-			chatMessages = append(chatMessages, schema.UserMessage(msg.Content))
-		case models.MessageTypeAssistant:
-			chatMessages = append(chatMessages, schema.AssistantMessage(msg.Content, nil))
-		case models.MessageTypeTool:
-			chatMessages = append(chatMessages, schema.ToolMessage(msg.Content, msg.Content))
-		}
-	}
-
-	_, err = agent.Chat(ctx.Request.Context(), chatMessages, callback)
-	if err != nil {
-		assistantMsg.Status = models.MessageStatusFailed
-		assistantMsg.SetContent(&models.MessageContent{
-			Blocks:           contentBlocks,
-			Text:             accumulatedContent,
-			ToolCalls:        accumulatedToolCalls,
-			ReasoningContent: accumulatedReasoning,
-		})
+		assistantMsg.NewID()
 		c.messageService.Create(assistantMsg)
 
-		sse.EmitEvent("message_completed", map[string]interface{}{
-			"id":     assistantMsg.ID,
-			"status": "failed",
-			"error":  err.Error(),
+		sse.EmitDataToID(req.SessionID, models.MessageEventCreated.ToString(), map[string]interface{}{
+			"type":       models.MessageTypeUser.ToString(),
+			"id":         userMsg.ID,
+			"session_id": userMsg.SessionID,
+			"content":    userMsg.Content,
+			"created_at": userMsg.CreatedAt,
 		})
-		sse.EmitEvent("error", map[string]string{"error": err.Error()})
+
+		// 获取 Agent 实例
+		agentParams := &services.AgentParams{
+			AgentID:  agentID,
+			WorkDir:  req.WorkDir,
+			Callback: Callback(req.SessionID, sse),
+		}
+		agent, err := c.agentRuntimeService.GetAgent(ctx.Request.Context(), agentParams)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
+			return
+		}
+		c.agentSSEClientMap.AddAgent(req.SessionID, agent)
+
+		// 从数据库加载历史消息
+		historyMessages, err := c.messageService.GetBySessionID(req.SessionID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
+			return
+		}
+
+		// 转换为 schema.Message 格式
+		chatMessages := make([]*schema.Message, 0, len(historyMessages))
+		for _, msg := range historyMessages {
+			switch msg.Type {
+			case models.MessageTypeUser:
+				chatMessages = append(chatMessages, schema.UserMessage(msg.Content))
+			case models.MessageTypeAssistant:
+				chatMessages = append(chatMessages, schema.AssistantMessage(msg.Content, nil))
+			case models.MessageTypeTool:
+				chatMessages = append(chatMessages, schema.ToolMessage(msg.Content, msg.Content))
+			case models.MessageTypeSystem:
+				chatMessages = append(chatMessages, schema.SystemMessage(msg.Content))
+			}
+		}
+
+		// 调用 Agent 进行聊天
+		_, err = agent.Chat(ctx.Request.Context(), chatMessages)
+		if err != nil {
+			errSend := models.CreateErrCompleted(req.SessionID, models.MessageStatusFailed, err.Error())
+			sse.EmitDataToID(req.SessionID, models.MessageEventCompleted.ToString(), errSend)
+		}
+
+		sse.EmitDataToID(req.SessionID, models.MessageEventCompleted.ToString(), map[string]string{"status": "completed"})
 	} else {
-		assistantMsg.Status = models.MessageStatusCompleted
-		msgContent := &models.MessageContent{
-			Blocks:           contentBlocks,
-			Text:             accumulatedContent,
-			ToolCalls:        accumulatedToolCalls,
-			ReasoningContent: accumulatedReasoning,
+		// Agent 已绑定，继续聊天
+		agent := c.agentSSEClientMap.GetSessionAgent(req.SessionID)
+		if agent == nil {
+			ctx.JSON(http.StatusInternalServerError, models.Fail("会话不存在"))
+			return
 		}
-		if err := assistantMsg.SetContent(msgContent); err != nil {
-			assistantMsg.Content = accumulatedContent
-		}
-		c.messageService.Create(assistantMsg)
 
-		sse.EmitEvent("message_completed", map[string]interface{}{
-			"id":      assistantMsg.ID,
-			"status":  "completed",
-			"content": assistantMsg.Content,
-		})
+		agent.Agent.AppendCB(Callback(req.SessionID, sse))
+		agent.Agent.WaitForResponse()
 	}
 
-	sse.EmitEvent("done", map[string]string{"status": "completed"})
+	sse.EmitDataToID(req.SessionID, models.MessageEventDone.ToString(), map[string]string{"status": "completed"})
 	sse.Close()
+}
+
+func Callback(sessionID string, sse *web.SSEContext) func(msg *iano.Message) {
+	return func(msg *iano.Message) {
+		sse.EmitDataToID(sessionID, models.MessageEventContent.ToString(), msg)
+	}
 }
 
 func JSONString(v interface{}) string {

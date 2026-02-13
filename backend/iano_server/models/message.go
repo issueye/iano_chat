@@ -15,6 +15,10 @@ const (
 	MessageTypeTool      MessageType = "tool"
 )
 
+func (t MessageType) ToString() string {
+	return string(t)
+}
+
 // MessageStatus 消息状态
 type MessageStatus string
 
@@ -24,6 +28,10 @@ const (
 	MessageStatusFailed    MessageStatus = "failed"
 	MessageStatusStreaming MessageStatus = "streaming"
 )
+
+func (s MessageStatus) ToString() string {
+	return string(s)
+}
 
 // FeedbackRating 反馈评分
 type FeedbackRating string
@@ -189,4 +197,32 @@ func CreateAssistantMessage(sessionID string, status MessageStatus) *Message {
 	}
 	msg.NewID()
 	return msg
+}
+
+type MessageEvent string
+
+const (
+	MessageEventCreated   MessageEvent = "message_created"   // 消息创建事件
+	MessageEventContent   MessageEvent = "message_content"   // 助手消息内容事件
+	MessageEventCompleted MessageEvent = "message_completed" // 消息完成事件
+	MessageEventError     MessageEvent = "error"             // 错误事件
+	MessageEventDone      MessageEvent = "done"              // 会话完成事件
+)
+
+func (e MessageEvent) ToString() string {
+	return string(e)
+}
+
+type ErrCompleted struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+	Error  string `json:"error"`
+}
+
+func CreateErrCompleted(id string, status MessageStatus, err string) *ErrCompleted {
+	return &ErrCompleted{
+		ID:     id,
+		Status: status.ToString(),
+		Error:  err,
+	}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"iano_server/app"
 	"log/slog"
@@ -33,21 +34,23 @@ var (
 )
 
 func main() {
-	app, err := app.NewApp(*rootPath, *configPath)
+	ctx := context.Background()
+	instance, err := app.NewApp(ctx, *rootPath, *configPath)
 	if err != nil {
 		slog.Error("初始化服务失败", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+	app.AppInstance = instance
 
 	// 启动服务
-	if err := app.Start(); err != nil {
+	if err := instance.Start(); err != nil {
 		slog.Error("服务启动失败", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 
 	// 监听
-	app.WatchSignals()
+	instance.WatchSignals()
 
 	// 关闭
-	app.Shutdown()
+	instance.Shutdown()
 }

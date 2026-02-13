@@ -4,18 +4,110 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
-	"strings"
-
 	iano "iano_agent"
 	script_engine "iano_script_engine"
 	"iano_server/models"
+	web "iano_web"
+	"log/slog"
+	"strings"
+	"sync"
 
 	"github.com/cloudwego/eino-ext/components/model/openai"
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 	"gorm.io/gorm"
 )
+
+type AgentSSEClient struct {
+	Agent      *AgentWrapper
+	SSEClients []*web.SSEContext
+}
+
+type AgentSSEClientMap struct {
+	Data map[string]*AgentSSEClient
+	mux  sync.RWMutex
+}
+
+func NewAgentSSEClientMap() *AgentSSEClientMap {
+	return &AgentSSEClientMap{
+		Data: make(map[string]*AgentSSEClient),
+	}
+}
+
+// Add 添加 AgentSSEClient
+func (m *AgentSSEClientMap) Add(sessionID string, client *AgentSSEClient) {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	m.Data[sessionID] = client
+}
+
+func (m *AgentSSEClientMap) GetSessionAgent(sessionID string) *AgentWrapper {
+	m.mux.RLock()
+	defer m.mux.RUnlock()
+
+	if client, exists := m.Data[sessionID]; exists {
+		return client.Agent
+	}
+
+	return nil
+}
+
+// RemoveSession 删除指定会话的 AgentSSEClient
+func (m *AgentSSEClientMap) RemoveSession(sessionID string) {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	delete(m.Data, sessionID)
+}
+
+// CreateSession 创建一个新的 AgentSSEClient 会话
+func (m *AgentSSEClientMap) CreateSession(sessionID string) *AgentSSEClient {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	client := &AgentSSEClient{
+		Agent:      nil,
+		SSEClients: make([]*web.SSEContext, 0),
+	}
+	m.Data[sessionID] = client
+	return client
+}
+
+// AddAgent 添加 Agent 到指定会话
+func (m *AgentSSEClientMap) AddAgent(sessionID string, agent *AgentWrapper) {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	if client, exists := m.Data[sessionID]; exists {
+		client.Agent = agent
+	}
+}
+
+// PushMessage 向指定会话的所有 SSE 客户端推送消息
+func (m *AgentSSEClientMap) PushMessage(sessionID string, msg *iano.Message) {
+	m.mux.RLock()
+	defer m.mux.RUnlock()
+	if client, exists := m.Data[sessionID]; exists {
+		for _, sse := range client.SSEClients {
+			sse.EmitDataToID(sessionID, "message", msg)
+		}
+	}
+}
+
+// CheckSession 检查会话是否存在
+func (m *AgentSSEClientMap) CheckSession(sessionID string) bool {
+	m.mux.RLock()
+	defer m.mux.RUnlock()
+	_, exists := m.Data[sessionID]
+	return exists
+}
+
+// CheckAgent 检查会话是否存在且已绑定 Agent
+func (m *AgentSSEClientMap) CheckAgent(sessionID string) bool {
+	m.mux.RLock()
+	defer m.mux.RUnlock()
+	if client, exists := m.Data[sessionID]; exists {
+		return client.Agent != nil
+	}
+	return false
+}
 
 // AgentRuntimeService Agent 运行时服务
 // 完全解耦会话和 Agent，只负责根据 Agent 配置创建和使用 Agent 实例
@@ -62,11 +154,17 @@ func NewAgentRuntimeServiceWithMCP(
 	}
 }
 
+type AgentParams struct {
+	AgentID  string
+	WorkDir  string
+	Callback iano.MessageCallback
+}
+
 // GetAgent 根据 Agent ID 获取 Agent 实例
 // 每次调用都创建新的 Agent 实例，不缓存，不与会话绑定
 // workDir 用于限制文件操作工具的操作范围，为空则使用当前目录
-func (s *AgentRuntimeService) GetAgent(ctx context.Context, agentID string, workDir string) (*AgentWrapper, error) {
-	agent, err := s.agentService.GetByID(agentID)
+func (s *AgentRuntimeService) GetAgent(ctx context.Context, params *AgentParams) (*AgentWrapper, error) {
+	agent, err := s.agentService.GetByID(params.AgentID)
 	if err != nil {
 		return nil, fmt.Errorf("agent not found: %w", err)
 	}
@@ -85,8 +183,8 @@ func (s *AgentRuntimeService) GetAgent(ctx context.Context, agentID string, work
 	if len(allowedTools) > 0 {
 		opts = append(opts, iano.WithAllowedTools(allowedTools))
 	}
-	if workDir != "" {
-		opts = append(opts, iano.WithWorkDir(workDir))
+	if params.WorkDir != "" {
+		opts = append(opts, iano.WithWorkDir(params.WorkDir))
 	}
 	if len(allowedCommands) > 0 {
 		opts = append(opts, iano.WithAllowedCommands(allowedCommands))
@@ -97,8 +195,11 @@ func (s *AgentRuntimeService) GetAgent(ctx context.Context, agentID string, work
 		return nil, fmt.Errorf("failed to create agent instance: %w", err)
 	}
 
+	// 添加回调函数
+	agentInstance.AppendCB(params.Callback)
+
 	if err := s.loadToolsToAgent(ctx, agentInstance, agent); err != nil {
-		slog.Warn("Failed to load tools to agent", "agentID", agentID, "error", err)
+		slog.Warn("Failed to load tools to agent", "agentID", params.AgentID, "error", err)
 	}
 
 	return &AgentWrapper{
@@ -114,8 +215,8 @@ type AgentWrapper struct {
 }
 
 // Chat 执行对话
-func (w *AgentWrapper) Chat(ctx context.Context, messages []*schema.Message, callback iano.MessageCallback) (string, error) {
-	return w.Agent.ChatWithHistory(ctx, messages, callback)
+func (w *AgentWrapper) Chat(ctx context.Context, messages []*schema.Message) (string, error) {
+	return w.Agent.ChatWithHistory(ctx, messages)
 }
 
 // GetAgentInfo 获取 Agent 信息

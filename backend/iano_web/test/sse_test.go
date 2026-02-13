@@ -1,6 +1,7 @@
-package web
+package sse
 
 import (
+	web "iano_web"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,19 +12,19 @@ import (
 func TestSSEventString(t *testing.T) {
 	tests := []struct {
 		name     string
-		event    SSEvent
+		event    web.SSEvent
 		expected string
 	}{
 		{
 			name: "Simple Data",
-			event: SSEvent{
+			event: web.SSEvent{
 				Data: "Hello, World!",
 			},
 			expected: "data: Hello, World!\n\n",
 		},
 		{
 			name: "With Event Type",
-			event: SSEvent{
+			event: web.SSEvent{
 				Event: "message",
 				Data:  "Hello",
 			},
@@ -31,7 +32,7 @@ func TestSSEventString(t *testing.T) {
 		},
 		{
 			name: "With ID",
-			event: SSEvent{
+			event: web.SSEvent{
 				ID:   "123",
 				Data: "Hello",
 			},
@@ -39,7 +40,7 @@ func TestSSEventString(t *testing.T) {
 		},
 		{
 			name: "With Retry",
-			event: SSEvent{
+			event: web.SSEvent{
 				Data:  "Hello",
 				Retry: 5000,
 			},
@@ -47,7 +48,7 @@ func TestSSEventString(t *testing.T) {
 		},
 		{
 			name: "Complete Event",
-			event: SSEvent{
+			event: web.SSEvent{
 				ID:    "123",
 				Event: "message",
 				Data:  "Hello",
@@ -68,7 +69,7 @@ func TestSSEventString(t *testing.T) {
 }
 
 func TestSSEventWithJSON(t *testing.T) {
-	event := SSEvent{
+	event := web.SSEvent{
 		Event: "user",
 		Data: map[string]string{
 			"name": "John",
@@ -88,9 +89,9 @@ func TestSSEventWithJSON(t *testing.T) {
 }
 
 func TestSSEContext(t *testing.T) {
-	engine := New()
+	engine := web.New()
 
-	engine.GET("/sse", func(c *Context) {
+	engine.GET("/sse", func(c *web.Context) {
 		sse, err := c.SSE()
 		if err != nil {
 			t.Errorf("Failed to create SSE context: %v", err)
@@ -98,7 +99,7 @@ func TestSSEContext(t *testing.T) {
 		}
 
 		// 发送事件
-		sse.Emit(&SSEvent{
+		sse.Emit(&web.SSEvent{
 			Event: "test",
 			Data:  "Hello",
 		})
@@ -126,9 +127,9 @@ func TestSSEContext(t *testing.T) {
 }
 
 func TestHandleSSE(t *testing.T) {
-	engine := New()
+	engine := web.New()
 
-	engine.GET("/sse", HandleSSE(func(sse *SSEContext, c *Context) {
+	engine.GET("/sse", web.HandleSSE(func(sse *web.SSEContext, c *web.Context) {
 		// 发送多个事件
 		sse.EmitEvent("message", "Event 1")
 		sse.EmitEvent("message", "Event 2")
@@ -158,9 +159,9 @@ func TestHandleSSE(t *testing.T) {
 }
 
 func TestSSEPing(t *testing.T) {
-	engine := New()
+	engine := web.New()
 
-	engine.GET("/sse", HandleSSE(func(sse *SSEContext, c *Context) {
+	engine.GET("/sse", web.HandleSSE(func(sse *web.SSEContext, c *web.Context) {
 		sse.Ping()
 		sse.Close()
 	}))
@@ -178,7 +179,7 @@ func TestSSEPing(t *testing.T) {
 }
 
 func TestSSEHub(t *testing.T) {
-	hub := NewSSEHub()
+	hub := web.NewSSEHub()
 
 	// 检查初始状态
 	if hub.ClientCount() != 0 {
@@ -193,10 +194,10 @@ func TestSSEHub(t *testing.T) {
 }
 
 func TestSSEContextClose(t *testing.T) {
-	engine := New()
+	engine := web.New()
 
 	closed := false
-	engine.GET("/sse", func(c *Context) {
+	engine.GET("/sse", func(c *web.Context) {
 		sse, _ := c.SSE()
 
 		sse.Close()
@@ -214,14 +215,14 @@ func TestSSEContextClose(t *testing.T) {
 }
 
 func TestSSEContextEmitAfterClose(t *testing.T) {
-	engine := New()
+	engine := web.New()
 
-	engine.GET("/sse", func(c *Context) {
+	engine.GET("/sse", func(c *web.Context) {
 		sse, _ := c.SSE()
 
 		sse.Close()
 
-		err := sse.Emit(&SSEvent{Data: "test"})
+		err := sse.Emit(&web.SSEvent{Data: "test"})
 		if err == nil {
 			t.Error("Expected error when emitting to closed connection")
 		}
@@ -257,7 +258,7 @@ func TestSplitLines(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		result := splitLines(tt.input)
+		result := web.SplitLines(tt.input)
 		if len(result) != len(tt.expected) {
 			t.Errorf("Expected %d lines, got %d", len(tt.expected), len(result))
 			continue
@@ -271,10 +272,10 @@ func TestSplitLines(t *testing.T) {
 }
 
 func TestSSEHeartbeat(t *testing.T) {
-	engine := New()
+	engine := web.New()
 
 	pingCount := 0
-	engine.GET("/sse", HandleSSE(func(sse *SSEContext, c *Context) {
+	engine.GET("/sse", web.HandleSSE(func(sse *web.SSEContext, c *web.Context) {
 		// 启动快速心跳（100ms）
 		ticker := sse.StartHeartbeat(100 * time.Millisecond)
 		defer ticker.Stop()
@@ -299,14 +300,14 @@ func TestSSEHeartbeat(t *testing.T) {
 }
 
 func TestSSEMiddleware(t *testing.T) {
-	engine := New()
+	engine := web.New()
 
 	connected := false
 	disconnected := false
 
-	config := SSEMiddlewareConfig{
+	config := web.SSEMiddlewareConfig{
 		HeartbeatInterval: 100 * time.Millisecond,
-		OnConnect: func(sse *SSEContext, c *Context) {
+		OnConnect: func(sse *web.SSEContext, c *web.Context) {
 			connected = true
 			// 发送欢迎消息
 			sse.EmitData("Welcome!")
@@ -321,7 +322,7 @@ func TestSSEMiddleware(t *testing.T) {
 		},
 	}
 
-	engine.GET("/sse", SSEMiddleware(config))
+	engine.GET("/sse", web.SSEMiddleware(config))
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/sse", nil)
@@ -343,7 +344,7 @@ func TestSSEMiddleware(t *testing.T) {
 }
 
 func TestSSEWithMultilineData(t *testing.T) {
-	event := SSEvent{
+	event := web.SSEvent{
 		Event: "message",
 		Data:  "Line 1\nLine 2\nLine 3",
 	}
@@ -367,13 +368,13 @@ func TestSSEWithMultilineData(t *testing.T) {
 
 // SSEClient 用于测试的 SSE 客户端
 type SSEClient struct {
-	Events chan SSEvent
+	Events chan web.SSEvent
 	Errors chan error
 }
 
 func NewSSEClient() *SSEClient {
 	return &SSEClient{
-		Events: make(chan SSEvent, 10),
+		Events: make(chan web.SSEvent, 10),
 		Errors: make(chan error, 1),
 	}
 }

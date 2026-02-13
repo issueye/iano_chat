@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // SSEvent SSE 事件结构
@@ -50,7 +52,7 @@ func (e *SSEvent) String() string {
 	}
 
 	// SSE 数据可以有多行，每行都要加 "data: " 前缀
-	lines := splitLines(dataStr)
+	lines := SplitLines(dataStr)
 	for _, line := range lines {
 		result += fmt.Sprintf("data: %s\n", line)
 	}
@@ -60,7 +62,7 @@ func (e *SSEvent) String() string {
 }
 
 // splitLines 将字符串按行分割
-func splitLines(s string) []string {
+func SplitLines(s string) []string {
 	var lines []string
 	var current string
 	for _, r := range s {
@@ -122,10 +124,14 @@ func (c *Context) SSE() (*SSEContext, error) {
 	c.Status(200)
 	flusher.Flush()
 
+	// 生成一个唯一的 ClientID UUID
+	clientID := uuid.New().String()
+
 	return &SSEContext{
-		Context: c,
-		flusher: flusher,
-		closeCh: make(chan struct{}),
+		Context:  c,
+		flusher:  flusher,
+		closeCh:  make(chan struct{}),
+		ClientID: clientID,
 	}, nil
 }
 
@@ -160,6 +166,10 @@ func (s *SSEContext) EmitEvent(eventType string, data interface{}) error {
 // EmitID 发送带 ID 的事件
 func (s *SSEContext) EmitID(id string, data interface{}) error {
 	return s.Emit(&SSEvent{ID: id, Data: data})
+}
+
+func (s *SSEContext) EmitDataToID(id string, eventType string, data interface{}) error {
+	return s.Emit(&SSEvent{ID: id, Event: eventType, Data: data})
 }
 
 // Ping 发送心跳（空数据）
