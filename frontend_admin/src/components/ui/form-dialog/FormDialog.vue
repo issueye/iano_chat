@@ -1,19 +1,36 @@
 <template>
   <Dialog :open="open" @update:open="handleOpenChange">
-    <DialogContent :class="['max-h-[80vh] overflow-hidden flex flex-col', contentClass]" :data-dialog="dataDialog">
-      <DialogTitle class="flex items-center justify-between p-6 border-b" @close="handleClose">{{ title }}</DialogTitle>
-      <form @submit.prevent="handleSubmit" class="flex flex-col flex-1 overflow-hidden p-6">
+    <DialogContent
+      :class="['max-h-[80vh] overflow-hidden flex flex-col', contentClass]"
+      :data-dialog="dataDialog"
+    >
+      <DialogTitle
+        class="flex items-center justify-between p-6 border-b"
+        @close="handleClose"
+        >{{ title }}</DialogTitle
+      >
+      <DialogDescription v-if="description" class="sr-only">{{
+        description
+      }}</DialogDescription>
+      <form
+        @submit.prevent="handleSubmit"
+        class="flex flex-col flex-1 overflow-hidden p-6"
+      >
         <div class="flex-1 overflow-y-auto scrollbar-stable space-y-4">
           <slot name="form" :form="form" :isEdit="isEdit">
             <!-- 默认表单渲染 -->
             <template v-for="field in fields" :key="field.key">
               <!-- 网格布局 -->
-              <div v-if="field.grid" class="grid gap-4 px-2" :class="`grid-cols-${field.grid}`">
-                <template v-for="gridField in field.fields" :key="gridField.key">
-                  <FormField
-                    :field="gridField"
-                    v-model="form[gridField.key]"
-                  />
+              <div
+                v-if="field.grid"
+                class="grid gap-4 px-2"
+                :class="`grid-cols-${field.grid}`"
+              >
+                <template
+                  v-for="gridField in field.fields"
+                  :key="gridField.key"
+                >
+                  <FormField :field="gridField" v-model="form[gridField.key]" />
                 </template>
               </div>
               <!-- 普通字段 -->
@@ -28,11 +45,16 @@
         </div>
       </form>
       <!-- 底部按钮 -->
-      <div class="flex justify-end gap-2 p-4 border-t">
-        <Button type="button" variant="outline" @click="handleCancel" :disabled="submitting">
+      <div class="flex justify-end gap-2 p-2 border-t">
+        <Button
+          type="button"
+          variant="outline"
+          @click="handleCancel"
+          :disabled="submitting"
+        >
           {{ cancelText }}
         </Button>
-        <Button type="submit" :disabled="submitting">
+        <Button type="submit" :disabled="submitting" @click="handleSubmit">
           {{ submitting ? loadingText : confirmText }}
         </Button>
       </div>
@@ -41,10 +63,15 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import FormField from './FormField.vue';
+import { ref, watch, computed } from "vue";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import FormField from "./FormField.vue";
 
 /**
  * 字段配置类型
@@ -66,19 +93,21 @@ const props = defineProps({
   /** 编辑的数据对象 */
   data: { type: Object, default: null },
   /** 数据ID字段名 */
-  idKey: { type: String, default: 'id' },
+  idKey: { type: String, default: "id" },
   /** 表单字段配置 */
   fields: { type: Array, default: () => [] },
   /** 弹窗内容类名 */
-  contentClass: { type: String, default: 'sm:max-w-[500px]' },
+  contentClass: { type: String, default: "sm:max-w-[500px]" },
   /** 弹窗标识 */
-  dataDialog: { type: String, default: 'form-dialog' },
+  dataDialog: { type: String, default: "form-dialog" },
+  /** 弹窗描述 */
+  description: { type: String, default: "" },
   /** 确认按钮文字 */
-  confirmText: { type: String, default: '保存' },
+  confirmText: { type: String, default: "保存" },
   /** 取消按钮文字 */
-  cancelText: { type: String, default: '取消' },
+  cancelText: { type: String, default: "取消" },
   /** 加载中文字 */
-  loadingText: { type: String, default: '保存中...' },
+  loadingText: { type: String, default: "保存中..." },
   /** 提交前的验证函数，返回 false 阻止提交 */
   beforeSubmit: { type: Function, default: null },
   /** 提交处理函数，返回 Promise */
@@ -87,7 +116,7 @@ const props = defineProps({
   showFooter: { type: Boolean, default: true },
 });
 
-const emit = defineEmits(['update:open', 'success']);
+const emit = defineEmits(["update:open", "success"]);
 
 const submitting = ref(false);
 const currentId = ref(null);
@@ -104,26 +133,29 @@ const isEdit = computed(() => !!currentId.value);
 function getFieldDefault(field) {
   if (field.grid && field.fields) {
     const defaults = {};
-    field.fields.forEach(f => {
-      defaults[f.key] = f.default ?? (f.type === 'number' ? 0 : '');
+    field.fields.forEach((f) => {
+      defaults[f.key] = f.default ?? (f.type === "number" ? 0 : "");
     });
     return defaults;
   }
-  return field.default ?? (field.type === 'number' ? 0 : (field.type === 'switch' ? 'active' : ''));
+  return (
+    field.default ??
+    (field.type === "number" ? 0 : field.type === "switch" ? "active" : "")
+  );
 }
 
 const handleClose = () => {
-  emit('update:open', false);
-}
+  emit("update:open", false);
+};
 
 /**
  * 初始化表单数据
  */
 function initForm() {
   const defaultForm = {};
-  props.fields.forEach(field => {
+  props.fields.forEach((field) => {
     if (field.grid && field.fields) {
-      field.fields.forEach(f => {
+      field.fields.forEach((f) => {
         defaultForm[f.key] = getFieldDefault(f);
       });
     } else {
@@ -139,9 +171,9 @@ function initForm() {
  */
 function extractFormData(data) {
   const result = {};
-  props.fields.forEach(field => {
+  props.fields.forEach((field) => {
     if (field.grid && field.fields) {
-      field.fields.forEach(f => {
+      field.fields.forEach((f) => {
         result[f.key] = data[f.key] ?? getFieldDefault(f);
       });
     } else {
@@ -154,34 +186,42 @@ function extractFormData(data) {
 /**
  * 监听弹窗打开状态，初始化表单数据
  */
-watch(() => props.open, (isOpen) => {
-  if (isOpen) {
-    if (props.data && props.data[props.idKey]) {
-      currentId.value = props.data[props.idKey];
-      form.value = extractFormData(props.data);
-    } else {
-      currentId.value = null;
-      form.value = initForm();
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (isOpen) {
+      if (props.data && props.data[props.idKey]) {
+        currentId.value = props.data[props.idKey];
+        form.value = extractFormData(props.data);
+      } else {
+        currentId.value = null;
+        form.value = initForm();
+      }
     }
-  }
-}, { immediate: true });
+  },
+  { immediate: true },
+);
 
 /**
  * 监听 data 属性变化
  */
-watch(() => props.data, (newData) => {
-  if (props.open && newData) {
-    currentId.value = newData[props.idKey];
-    form.value = extractFormData(newData);
-  }
-}, { deep: true });
+watch(
+  () => props.data,
+  (newData) => {
+    if (props.open && newData) {
+      currentId.value = newData[props.idKey];
+      form.value = extractFormData(newData);
+    }
+  },
+  { deep: true },
+);
 
 /**
  * 处理弹窗状态变化
  * @param {boolean} value - 弹窗开关状态
  */
 function handleOpenChange(value) {
-  emit('update:open', value);
+  emit("update:open", value);
   if (!value) {
     setTimeout(() => {
       currentId.value = null;
@@ -194,7 +234,7 @@ function handleOpenChange(value) {
  * 取消操作
  */
 function handleCancel() {
-  emit('update:open', false);
+  emit("update:open", false);
   setTimeout(() => {
     currentId.value = null;
     form.value = initForm();
@@ -205,6 +245,7 @@ function handleCancel() {
  * 提交表单
  */
 async function handleSubmit() {
+  console.log("handleSubmit");
   // 执行前置验证
   if (props.beforeSubmit) {
     const valid = await props.beforeSubmit(form.value, isEdit.value);
@@ -214,14 +255,14 @@ async function handleSubmit() {
   submitting.value = true;
   try {
     await props.onSubmit(form.value, isEdit.value, currentId.value);
-    emit('success');
-    emit('update:open', false);
+    emit("success");
+    emit("update:open", false);
     setTimeout(() => {
       currentId.value = null;
       form.value = initForm();
     }, 200);
   } catch (error) {
-    console.error('Form submission failed:', error);
+    console.error("Form submission failed:", error);
   } finally {
     submitting.value = false;
   }

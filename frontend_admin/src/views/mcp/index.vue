@@ -191,7 +191,7 @@ const columns = [
   { key: "enabled", title: "启用", width: "80px", align: "center" },
   { key: "tools_count", title: "工具数", width: "80px", align: "center" },
   { key: "version", title: "版本", width: "100px", align: "center" },
-  { key: "created_at", title: "创建时间", width: "160px" },
+  { key: "created_at", title: "创建时间", slot: "created_at", width: "160px" },
   { title: "操作", slot: "actions", width: "160px", align: "center" },
 ]
 

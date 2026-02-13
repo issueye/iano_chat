@@ -3,8 +3,8 @@
     v-model:open="dialogOpen"
     :title="dialogTitle"
     :fields="fields"
-    content-class="sm:max-w-[800px]"
-    data-dialog="provider-form"
+    contentClass="sm:max-w-[800px]"
+    dataDialog="mcp-form"
     :on-submit="handleSubmit"
     @success="$emit('success')"
   />
@@ -129,6 +129,8 @@ watch(() => props.server, (newServer) => {
 }, { immediate: true })
 
 function beforeSubmit(formData) {
+  console.log('beforeSubmit', formData);
+  
   try {
     if (formData.args) {
       JSON.parse(formData.args)
@@ -143,8 +145,10 @@ function beforeSubmit(formData) {
   return true
 }
 
-async function handleSubmit() {
-  const data = { ...form.value }
+async function handleSubmit(formData, isEdit, id) {
+  const data = { ...formData }
+
+  console.log('data', data);
   
   if (!beforeSubmit(data)) {
     return
@@ -152,8 +156,8 @@ async function handleSubmit() {
   
   submitting.value = true
   try {
-    if (isEdit.value) {
-      await mcpApi.updateServer(currentId.value, data)
+    if (isEdit) {
+      await mcpApi.updateServer(id, data)
     } else {
       await mcpApi.createServer(data)
     }
