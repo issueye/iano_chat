@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"iano_agent/tools"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -90,6 +91,14 @@ func (a *Agent) buildSystemPrompt() string {
 	} else {
 		parts = append(parts, "你是一个智能助手。")
 	}
+
+	osInfo := "你运行在 "
+	if runtime.GOOS == "windows" {
+		osInfo += "Windows 操作系统上。使用 PowerShell 命令，例如：dir 代替 ls，type 代替 cat，cd 代替 pwd。"
+	} else {
+		osInfo += "Linux/Unix 操作系统上。使用标准的 Bash 命令。"
+	}
+	parts = append(parts, osInfo)
 
 	return strings.Join(parts, "")
 }

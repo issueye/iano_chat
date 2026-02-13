@@ -80,10 +80,23 @@ func splitLines(s string) []string {
 // SSEContext SSE 上下文
 type SSEContext struct {
 	*Context
-	flusher http.Flusher
-	closeCh chan struct{}
-	mu      sync.Mutex
-	closed  bool
+	flusher   http.Flusher
+	closeCh   chan struct{}
+	mu        sync.Mutex
+	closed    bool
+	once      sync.Once
+	ClientID  string
+	SessionID string
+}
+
+// SetSessionID 设置会话ID
+func (s *SSEContext) SetSessionID(sessionID string) {
+	s.SessionID = sessionID
+}
+
+// GetSessionID 获取会话ID
+func (s *SSEContext) GetSessionID() string {
+	return s.SessionID
 }
 
 // SSE 创建 SSE 上下文
@@ -156,13 +169,14 @@ func (s *SSEContext) Ping() error {
 
 // Close 关闭连接
 func (s *SSEContext) Close() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if !s.closed {
-		s.closed = true
-		close(s.closeCh)
-	}
+	s.once.Do(func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		if !s.closed {
+			s.closed = true
+			close(s.closeCh)
+		}
+	})
 }
 
 // IsClosed 检查连接是否已关闭
@@ -219,6 +233,7 @@ func HandleSSE(handler func(sse *SSEContext, c *Context)) HandlerFunc {
 // SSEHub SSE 广播管理器
 type SSEHub struct {
 	clients    map[string]*SSEContext
+	sessionMap map[string]map[string]*SSEContext
 	broadcast  chan *SSEvent
 	register   chan *SSEContext
 	unregister chan string
@@ -229,10 +244,20 @@ type SSEHub struct {
 func NewSSEHub() *SSEHub {
 	return &SSEHub{
 		clients:    make(map[string]*SSEContext),
+		sessionMap: make(map[string]map[string]*SSEContext),
 		broadcast:  make(chan *SSEvent),
 		register:   make(chan *SSEContext),
 		unregister: make(chan string),
 	}
+}
+
+// NewSSEHubWithContext 创建支持会话的 SSE 管理器（推荐）
+func NewSSEHubWithContext(ctx context.Context) *SSEHub {
+	hub := NewSSEHub()
+	go func() {
+		hub.Run()
+	}()
+	return hub
 }
 
 // Run 启动 SSE 管理器
@@ -241,14 +266,26 @@ func (h *SSEHub) Run() {
 		select {
 		case client := <-h.register:
 			h.mu.Lock()
-			// 使用 RemoteAddr 作为客户端 ID
 			clientID := client.Request.RemoteAddr
+			client.ClientID = clientID
 			h.clients[clientID] = client
+			if client.SessionID != "" {
+				if h.sessionMap[client.SessionID] == nil {
+					h.sessionMap[client.SessionID] = make(map[string]*SSEContext)
+				}
+				h.sessionMap[client.SessionID][clientID] = client
+			}
 			h.mu.Unlock()
 
 		case clientID := <-h.unregister:
 			h.mu.Lock()
 			if client, ok := h.clients[clientID]; ok {
+				if client.SessionID != "" {
+					delete(h.sessionMap[client.SessionID], clientID)
+					if len(h.sessionMap[client.SessionID]) == 0 {
+						delete(h.sessionMap, client.SessionID)
+					}
+				}
 				delete(h.clients, clientID)
 				client.Close()
 			}
@@ -262,10 +299,8 @@ func (h *SSEHub) Run() {
 			}
 			h.mu.RUnlock()
 
-			// 广播给所有客户端
 			for clientID, client := range clients {
 				if err := client.Emit(event); err != nil {
-					// 发送失败，注销客户端
 					h.unregister <- clientID
 				}
 			}
@@ -303,6 +338,84 @@ func (h *SSEHub) ClientCount() int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return len(h.clients)
+}
+
+// GetSessionClients 获取指定会话的所有客户端
+func (h *SSEHub) GetSessionClients(sessionID string) []*SSEContext {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	var clients []*SSEContext
+	if sessionClients, ok := h.sessionMap[sessionID]; ok {
+		for _, client := range sessionClients {
+			clients = append(clients, client)
+		}
+	}
+	return clients
+}
+
+// GetSessionClientCount 获取指定会话的客户端数量
+func (h *SSEHub) GetSessionClientCount(sessionID string) int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	if sessionClients, ok := h.sessionMap[sessionID]; ok {
+		return len(sessionClients)
+	}
+	return 0
+}
+
+// BroadcastToSession 向指定会话的所有客户端广播事件
+func (h *SSEHub) BroadcastToSession(sessionID string, event *SSEvent) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	if sessionClients, ok := h.sessionMap[sessionID]; ok {
+		for clientID, client := range sessionClients {
+			if err := client.Emit(event); err != nil {
+				go h.unregisterClient(clientID)
+			}
+		}
+	}
+}
+
+// BroadcastDataToSession 向指定会话的所有客户端广播数据
+func (h *SSEHub) BroadcastDataToSession(sessionID string, data interface{}) {
+	h.BroadcastToSession(sessionID, &SSEvent{Data: data})
+}
+
+// BroadcastEventToSession 向指定会话的所有客户端广播事件
+func (h *SSEHub) BroadcastEventToSession(sessionID string, eventType string, data interface{}) {
+	h.BroadcastToSession(sessionID, &SSEvent{Event: eventType, Data: data})
+}
+
+// SendToClient 向指定客户端发送事件
+func (h *SSEHub) SendToClient(clientID string, event *SSEvent) error {
+	h.mu.RLock()
+	client, ok := h.clients[clientID]
+	h.mu.RUnlock()
+
+	if !ok {
+		return fmt.Errorf("client not found: %s", clientID)
+	}
+
+	return client.Emit(event)
+}
+
+// SendDataToClient 向指定客户端发送数据
+func (h *SSEHub) SendDataToClient(clientID string, data interface{}) error {
+	return h.SendToClient(clientID, &SSEvent{Data: data})
+}
+
+// unregisterClient 注销客户端的内部方法
+func (h *SSEHub) unregisterClient(clientID string) {
+	h.unregister <- clientID
+}
+
+// RegisterWithSession 注册客户端并关联会话
+func (h *SSEHub) RegisterWithSession(client *SSEContext, sessionID string) {
+	client.SessionID = sessionID
+	h.Register(client)
 }
 
 // SSEMiddlewareConfig SSE 中间件配置
