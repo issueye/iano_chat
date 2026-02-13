@@ -226,12 +226,14 @@ func (s *MCPService) ConnectServer(ctx context.Context, serverID string) error {
 		s.ServerToolService.DeleteByServerID(serverID)
 		for _, tool := range result.Tools {
 			schema, _ := json.Marshal(tool.InputSchema)
-			s.ServerToolService.Create(&models.MCPServerTool{
+			toolModel := &models.MCPServerTool{
 				ServerID:    serverID,
 				Name:        tool.Name,
 				Description: tool.Description,
 				InputSchema: string(schema),
-			})
+			}
+			toolModel.NewID()
+			s.ServerToolService.Create(toolModel)
 		}
 		s.ServerService.Update(serverID, map[string]interface{}{
 			"status":      models.MCPServerStatusConnected,
