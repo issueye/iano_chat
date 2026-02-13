@@ -36,6 +36,12 @@ func NewExecutor(config *ExecutorConfig) Executor {
 	if config.EnableURL {
 		modules = append(modules, builtin.NewURLModule())
 	}
+	if config.EnableFile {
+		modules = append(modules, builtin.NewFileModule(nil))
+	}
+	if config.EnableCmd {
+		modules = append(modules, builtin.NewCmdModule(nil))
+	}
 
 	engine := NewEngineWithModules(&Config{
 		Timeout:          config.DefaultTimeout,

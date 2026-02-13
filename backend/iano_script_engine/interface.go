@@ -77,6 +77,8 @@ type ExecutorConfig struct {
 	EnableHTTP     bool
 	EnableUtils    bool
 	EnableURL      bool
+	EnableFile     bool
+	EnableCmd      bool
 }
 
 // DefaultExecutorConfig 默认配置
@@ -87,6 +89,8 @@ func DefaultExecutorConfig() *ExecutorConfig {
 		EnableHTTP:     true,
 		EnableUtils:    true,
 		EnableURL:      true,
+		EnableFile:     false,
+		EnableCmd:      false,
 	}
 }
 
@@ -130,6 +134,6 @@ func DefaultSandboxLimits() *SandboxLimits {
 		MaxMemoryMB:      50,
 		MaxOutputSize:    1024 * 1024, // 1MB
 		AllowedModules:   []string{"utils", "url"},
-		BlockedFunctions: []string{"http", "eval", "Function"},
+		BlockedFunctions: []string{"http", "eval", "Function", "file", "cmd"},
 	}
 }
