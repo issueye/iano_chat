@@ -44,6 +44,14 @@ type CmdModuleConfig struct {
 	EnableShell bool
 }
 
+func DefaultCmdModuleConfig() *CmdModuleConfig {
+	return &CmdModuleConfig{
+		Timeout:       30 * time.Second,
+		MaxOutputSize: 1024 * 1024, // 1MB
+		EnableShell:   true,
+	}
+}
+
 // NewCmdModule 创建命令模块
 func NewCmdModule(config *CmdModuleConfig) *CmdModule {
 	if config == nil {

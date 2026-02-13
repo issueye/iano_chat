@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"time"
 
 	iano "iano_agent"
 	script_engine "iano_script_engine"
@@ -247,9 +246,7 @@ func (s *AgentRuntimeService) createToolHandler(tool *models.Tool) iano.DynamicT
 
 // executeScriptTool 执行脚本工具
 func (s *AgentRuntimeService) executeScriptTool(ctx context.Context, tool *models.Tool, params map[string]interface{}) (string, error) {
-	engine := script_engine.NewEngine(&script_engine.Config{
-		Timeout: 30 * time.Second,
-	})
+	engine := script_engine.NewEngine(script_engine.DefaultConfig())
 	result, err := engine.Execute(ctx, tool.ScriptContent, params)
 	if err != nil {
 		return "", fmt.Errorf("script execution failed: %w", err)

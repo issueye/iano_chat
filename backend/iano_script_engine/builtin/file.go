@@ -30,6 +30,14 @@ type FileModuleConfig struct {
 	ReadOnly bool
 }
 
+// DefaultFileModuleConfig 默认文件模块配置
+func DefaultFileModuleConfig() *FileModuleConfig {
+	return &FileModuleConfig{
+		MaxFileSize: 10 * 1024 * 1024, // 10MB
+		ReadOnly:    false,
+	}
+}
+
 // NewFileModule 创建文件模块
 func NewFileModule(config *FileModuleConfig) *FileModule {
 	if config == nil {

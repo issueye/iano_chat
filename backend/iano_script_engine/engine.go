@@ -29,11 +29,18 @@ func NewEngine(config *Config) Engine {
 		config = DefaultConfig()
 	}
 
+	cmdCfg := builtin.DefaultCmdModuleConfig()
+	cmdCfg.Timeout = config.Timeout
+
+	fileCfg := builtin.DefaultFileModuleConfig()
+
 	// 默认启用所有模块
 	modules := []Module{
 		builtin.NewHTTPModule(config.Timeout),
 		builtin.NewUtilsModule(),
 		builtin.NewURLModule(),
+		builtin.NewCmdModule(cmdCfg),
+		builtin.NewFileModule(fileCfg),
 	}
 
 	return NewEngineWithModules(config, modules...)
