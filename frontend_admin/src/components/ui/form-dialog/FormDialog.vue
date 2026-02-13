@@ -14,9 +14,9 @@
       }}</DialogDescription>
       <form
         @submit.prevent="handleSubmit"
-        class="flex flex-col flex-1 overflow-hidden p-6"
+        class="flex flex-col flex-1 overflow-hidden"
       >
-        <div class="flex-1 overflow-y-auto scrollbar-stable space-y-4">
+        <div class="flex-1 overflow-y-auto scrollbar-stable space-y-4 p-6">
           <slot name="form" :form="form" :isEdit="isEdit">
             <!-- 默认表单渲染 -->
             <template v-for="field in fields" :key="field.key">

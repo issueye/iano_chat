@@ -197,6 +197,7 @@ export const useMessageStore = defineStore('message', () => {
       const reader = streamResponse.body.getReader()
       const decoder = new TextDecoder()
       let currentEventType = ''
+      let accumulatedReasoning = ''
 
       while (true) {
         const { done, value } = await reader.read()
@@ -212,7 +213,7 @@ export const useMessageStore = defineStore('message', () => {
             try {
               const eventData = JSON.parse(line.slice(6))
 
-              if (currentEventType === 'message_created') {
+                if (currentEventType === 'message_created') {
                 const msg = {
                   id: eventData.id,
                   session_id: eventData.session_id,
@@ -234,8 +235,19 @@ export const useMessageStore = defineStore('message', () => {
                     accumulatedContent = parsed.text || ''
                     accumulatedToolCalls = parsed.tool_calls || []
                     contentBlocks = parsed.blocks || []
+                    accumulatedReasoning = parsed.reasoning_content || ''
                   } catch (e) {}
                 }
+              } else if (currentEventType === 'reasoning' && assistantMessageId) {
+                accumulatedReasoning = eventData.reasoning || ''
+                updateMessage(assistantMessageId, {
+                  content: JSON.stringify({
+                    blocks: contentBlocks,
+                    text: accumulatedContent,
+                    tool_calls: accumulatedToolCalls,
+                    reasoning_content: accumulatedReasoning
+                  })
+                })
               } else if (currentEventType === 'content_block' && assistantMessageId) {
                 if (eventData.type === 'text' && eventData.text) {
                   accumulatedContent += eventData.text
@@ -264,7 +276,8 @@ export const useMessageStore = defineStore('message', () => {
                   content: JSON.stringify({
                     blocks: contentBlocks,
                     text: accumulatedContent,
-                    tool_calls: accumulatedToolCalls
+                    tool_calls: accumulatedToolCalls,
+                    reasoning_content: accumulatedReasoning
                   })
                 })
               } else if (currentEventType === 'message_completed' && assistantMessageId) {

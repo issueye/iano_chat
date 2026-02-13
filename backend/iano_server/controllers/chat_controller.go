@@ -154,7 +154,15 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 	var accumulatedContent string
 	var accumulatedToolCalls []models.ToolCall
 	var contentBlocks []models.ContentBlock
-	callback := func(content string, isToolCall bool, toolCalls *iano.ToolCallInfo) {
+	var accumulatedReasoning string
+	callback := func(content string, isToolCall bool, toolCalls *iano.ToolCallInfo, reasoning string) {
+		if reasoning != "" {
+			accumulatedReasoning = reasoning
+			sse.EmitEvent("reasoning", map[string]interface{}{
+				"reasoning": reasoning,
+			})
+		}
+
 		if isToolCall && toolCalls != nil {
 			toolCall := models.ToolCall{
 				ID:   toolCalls.ID,
@@ -228,9 +236,10 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 	if err != nil {
 		assistantMsg.Status = models.MessageStatusFailed
 		assistantMsg.SetContent(&models.MessageContent{
-			Blocks:    contentBlocks,
-			Text:      accumulatedContent,
-			ToolCalls: accumulatedToolCalls,
+			Blocks:           contentBlocks,
+			Text:             accumulatedContent,
+			ToolCalls:        accumulatedToolCalls,
+			ReasoningContent: accumulatedReasoning,
 		})
 		c.messageService.Create(assistantMsg)
 
@@ -243,9 +252,10 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 	} else {
 		assistantMsg.Status = models.MessageStatusCompleted
 		msgContent := &models.MessageContent{
-			Blocks:    contentBlocks,
-			Text:      accumulatedContent,
-			ToolCalls: accumulatedToolCalls,
+			Blocks:           contentBlocks,
+			Text:             accumulatedContent,
+			ToolCalls:        accumulatedToolCalls,
+			ReasoningContent: accumulatedReasoning,
 		}
 		if err := assistantMsg.SetContent(msgContent); err != nil {
 			assistantMsg.Content = accumulatedContent

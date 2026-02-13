@@ -89,7 +89,7 @@ func (a *Agent) Loop(ctx context.Context, messages []*schema.Message, cb Message
 				})
 
 				if cb != nil {
-					cb(msg.Content, len(msg.ToolCalls) > 0, nil)
+					cb(msg.Content, len(msg.ToolCalls) > 0, nil, "")
 				}
 			}
 
@@ -103,7 +103,7 @@ func (a *Agent) Loop(ctx context.Context, messages []*schema.Message, cb Message
 					}
 
 					if cb != nil {
-						cb("", true, toolCallInfo)
+						cb("", true, toolCallInfo, "")
 					}
 
 					toolResult, err := a.invokeTool(ctx, tc.Function.Name, tc.Function.Arguments)

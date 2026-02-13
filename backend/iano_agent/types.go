@@ -11,7 +11,7 @@ type ToolCallInfo struct {
 	Arguments string `json:"arguments"`
 }
 
-type MessageCallback func(content string, isToolCall bool, toolCalls *ToolCallInfo)
+type MessageCallback func(content string, isToolCall bool, toolCalls *ToolCallInfo, reasoning string)
 
 type TokenUsage struct {
 	TotalTokens      int64
