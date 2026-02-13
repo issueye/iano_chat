@@ -139,7 +139,7 @@ type ScriptToolConfig struct {
 	Parameters []ToolParamDef
 	Script     string
 	Language   string
-	Engine     *script_engine.Engine
+	Engine     script_engine.Engine
 }
 
 func NewScriptTool(cfg *ScriptToolConfig) *DynamicTool {
@@ -153,7 +153,11 @@ func NewScriptTool(cfg *ScriptToolConfig) *DynamicTool {
 		Desc:       cfg.Desc,
 		Parameters: cfg.Parameters,
 		Handler: func(ctx context.Context, params map[string]interface{}) (string, error) {
-			return engine.ExecuteWithStringResult(ctx, cfg.Script, params)
+			result, err := engine.Execute(ctx, cfg.Script, params)
+			if err != nil {
+				return "", fmt.Errorf("script execution failed: %w", err)
+			}
+			return result.Value.(string), nil
 		},
 	})
 }
