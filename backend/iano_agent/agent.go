@@ -23,6 +23,7 @@ type Config struct {
 	AllowedCommands []string
 	SystemPrompt    string
 	WorkDir         string
+	Timeout         int
 }
 
 func DefaultConfig() *Config {
@@ -30,6 +31,7 @@ func DefaultConfig() *Config {
 		Tools:        make([]Tool, 0),
 		MaxRounds:    50,
 		SystemPrompt: "你是一个智能助手。",
+		Timeout:      30,
 	}
 }
 
@@ -42,6 +44,7 @@ type Agent struct {
 	maxRounds       int
 	toolRegistry    tools.Registry
 	workDir         string
+	timeout         int
 	allowedCommands []string
 }
 
@@ -57,6 +60,7 @@ func NewAgent(chatModel model.ToolCallingChatModel, opts ...Option) (*Agent, err
 		maxRounds:       cfg.MaxRounds,
 		tokenUsage:      &TokenUsage{LastUpdated: time.Now()},
 		workDir:         cfg.WorkDir,
+		timeout:         cfg.Timeout,
 		allowedCommands: cfg.AllowedCommands,
 	}
 
@@ -108,7 +112,7 @@ func (a *Agent) makeToolsConfig() (compose.ToolsNodeConfig, error) {
 
 	if len(bts) == 0 {
 		ctx := context.Background()
-		if err := tools.RegisterBuiltinTools(ctx, a.workDir); err != nil {
+		if err := tools.RegisterBuiltinTools(ctx, a.workDir, a.timeout); err != nil {
 			return compose.ToolsNodeConfig{}, fmt.Errorf("注册内置工具失败: %w", err)
 		}
 		bts = a.toolRegistry.List()

@@ -17,12 +17,12 @@ type DuckDuckGoTool struct {
 	tool   tool.InvokableTool
 }
 
-func NewDuckDuckGoTool() (*DuckDuckGoTool, error) {
+func NewDuckDuckGoTool(timeout int) (*DuckDuckGoTool, error) {
 	ctx := context.Background()
 	config := &duckduckgo.Config{
 		MaxResults: 3, // Limit to return 20 results
 		Region:     duckduckgo.RegionWT,
-		Timeout:    10 * time.Second,
+		Timeout:    time.Duration(timeout) * time.Second,
 	}
 
 	tool, err := duckduckgo.NewTextSearchTool(ctx, config)

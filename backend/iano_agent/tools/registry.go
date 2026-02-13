@@ -141,7 +141,7 @@ var GlobalRegistry = NewRegistry()
 func GetBuiltinTools(ctx context.Context) (map[string]tool.BaseTool, error) {
 	toolsMap := make(map[string]tool.BaseTool)
 
-	ddgTool, err := NewDuckDuckGoTool()
+	ddgTool, err := NewDuckDuckGoTool(30)
 	if err != nil {
 		return nil, fmt.Errorf("创建 DuckDuckGo 工具失败: %w", err)
 	}
@@ -180,8 +180,8 @@ func GetBuiltinTools(ctx context.Context) (map[string]tool.BaseTool, error) {
 	return toolsMap, nil
 }
 
-func RegisterBuiltinTools(ctx context.Context, workDir string) error {
-	ddgTool, err := NewDuckDuckGoTool()
+func RegisterBuiltinTools(ctx context.Context, workDir string, timeout int) error {
+	ddgTool, err := NewDuckDuckGoTool(timeout)
 	if err != nil {
 		return fmt.Errorf("创建 DuckDuckGo 工具失败: %w", err)
 	}
