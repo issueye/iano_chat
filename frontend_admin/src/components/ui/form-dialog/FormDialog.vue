@@ -97,7 +97,7 @@ const props = defineProps({
   /** 表单字段配置 */
   fields: { type: Array, default: () => [] },
   /** 弹窗内容类名 */
-  contentClass: { type: String, default: "sm:max-w-[500px]" },
+  contentClass: { type: String, default: "sm:max-w-[800px]" },
   /** 弹窗标识 */
   dataDialog: { type: String, default: "form-dialog" },
   /** 弹窗描述 */

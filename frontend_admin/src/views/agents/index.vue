@@ -121,12 +121,16 @@
     <AlertDialog
       v-model:open="deleteDialogOpen"
       :title="`删除 ${deletingItem?.name || ''}`"
-      :description="`确定要删除 Agent「${deletingItem?.name}」吗？此操作无法撤销。`"
-      confirm-text="删除"
-      cancel-text="取消"
+      :description="`确定要删除 Agent ${deletingItem?.name} 吗？此操作无法撤销。`"
+      confirmText="删除"
+      cancelText="取消"
       variant="destructive"
       @confirm="executeDelete"
-    />
+    >
+      <p class="text-muted-foreground">
+        确定要删除 Agent「{{ deletingItem?.name }}」吗？此操作无法撤销。
+      </p>
+    </AlertDialog>
   </div>
 </template>
 

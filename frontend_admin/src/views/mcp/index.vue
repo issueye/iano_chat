@@ -153,12 +153,16 @@
     <AlertDialog
       v-model:open="deleteDialogOpen"
       :title="`删除 ${deletingItem?.name || ''}`"
-      :description="`确定要删除 MCP 服务器「${deletingItem?.name}」吗？此操作无法撤销。`"
-      confirm-text="删除"
-      cancel-text="取消"
+      :description="`确定要删除 MCP 服务器 ${deletingItem?.name} 吗？此操作无法撤销。`"
+      confirmText="删除"
+      cancelText="取消"
       variant="destructive"
       @confirm="executeDelete"
-    />
+    >
+      <p class="text-muted-foreground">
+        确定要删除 MCP 服务器「{{ deletingItem?.name }}」吗？此操作无法撤销。
+      </p>
+    </AlertDialog>
   </div>
 </template>
 
@@ -185,13 +189,13 @@ import { useMCPStore } from "@/stores"
 const mcpStore = useMCPStore()
 
 const columns = [
-  { key: "name", title: "名称" },
-  { key: "transport", title: "传输类型", width: "100px", align: "center" },
-  { key: "status", title: "状态", width: "100px", align: "center" },
-  { key: "enabled", title: "启用", width: "80px", align: "center" },
-  { key: "tools_count", title: "工具数", width: "80px", align: "center" },
-  { key: "version", title: "版本", width: "100px", align: "center" },
-  { key: "created_at", title: "创建时间", slot: "created_at", width: "160px" },
+  { key: "name", title: "名称", slot: "name" },
+  { key: "transport", title: "传输类型", slot: "transport", width: "100px", align: "center" },
+  { key: "status", title: "状态", slot: "status", width: "100px", align: "center" },
+  { key: "enabled", title: "启用", slot: "enabled", width: "80px", align: "center" },
+  { key: "tools_count", title: "工具数", slot: "tools_count", width: "80px", align: "center" },
+  { key: "version", title: "版本", slot: "version", width: "100px", align: "center" },
+  { key: "created_at", title: "创建时间", slot: "created_at", width: "180px" },
   { title: "操作", slot: "actions", width: "160px", align: "center" },
 ]
 
