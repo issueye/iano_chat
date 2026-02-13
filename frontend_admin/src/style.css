@@ -110,3 +110,9 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-foreground);
 }
+
+/* 滚动条占位，避免内容挤压 */
+.scrollbar-stable {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}

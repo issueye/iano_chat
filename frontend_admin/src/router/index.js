@@ -29,6 +29,11 @@ const routes = [
         name: "Tools",
         component: () => import("@/views/tools/index.vue"),
       },
+      {
+        path: "mcp",
+        name: "MCP",
+        component: () => import("@/views/mcp/index.vue"),
+      },
     ],
   },
 ];

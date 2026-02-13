@@ -1,39 +1,41 @@
 <template>
   <Dialog :open="open" @update:open="handleOpenChange">
-    <DialogContent :class="contentClass" :data-dialog="dataDialog">
-      <DialogTitle>{{ title }}</DialogTitle>
-      <form @submit.prevent="handleSubmit" class="space-y-4">
-        <slot name="form" :form="form" :isEdit="isEdit">
-          <!-- 默认表单渲染 -->
-          <template v-for="field in fields" :key="field.key">
-            <!-- 网格布局 -->
-            <div v-if="field.grid" class="grid gap-4" :class="`grid-cols-${field.grid}`">
-              <template v-for="gridField in field.fields" :key="gridField.key">
-                <FormField
-                  :field="gridField"
-                  v-model="form[gridField.key]"
-                />
-              </template>
-            </div>
-            <!-- 普通字段 -->
-            <FormField
-              v-else
-              :field="field"
-              v-model="form[field.key]"
-            />
-          </template>
-        </slot>
-        
-        <!-- 底部按钮 -->
-        <div class="flex justify-end gap-2 pt-4">
-          <Button type="button" variant="outline" @click="handleCancel" :disabled="submitting">
-            {{ cancelText }}
-          </Button>
-          <Button type="submit" :disabled="submitting">
-            {{ submitting ? loadingText : confirmText }}
-          </Button>
+    <DialogContent :class="['max-h-[80vh] overflow-hidden flex flex-col', contentClass]" :data-dialog="dataDialog">
+      <DialogTitle class="flex items-center justify-between p-6 border-b" @close="handleClose">{{ title }}</DialogTitle>
+      <form @submit.prevent="handleSubmit" class="flex flex-col flex-1 overflow-hidden p-6">
+        <div class="flex-1 overflow-y-auto scrollbar-stable space-y-4">
+          <slot name="form" :form="form" :isEdit="isEdit">
+            <!-- 默认表单渲染 -->
+            <template v-for="field in fields" :key="field.key">
+              <!-- 网格布局 -->
+              <div v-if="field.grid" class="grid gap-4 px-2" :class="`grid-cols-${field.grid}`">
+                <template v-for="gridField in field.fields" :key="gridField.key">
+                  <FormField
+                    :field="gridField"
+                    v-model="form[gridField.key]"
+                  />
+                </template>
+              </div>
+              <!-- 普通字段 -->
+              <FormField
+                class="px-2"
+                v-else
+                :field="field"
+                v-model="form[field.key]"
+              />
+            </template>
+          </slot>
         </div>
       </form>
+      <!-- 底部按钮 -->
+      <div class="flex justify-end gap-2 p-4 border-t">
+        <Button type="button" variant="outline" @click="handleCancel" :disabled="submitting">
+          {{ cancelText }}
+        </Button>
+        <Button type="submit" :disabled="submitting">
+          {{ submitting ? loadingText : confirmText }}
+        </Button>
+      </div>
     </DialogContent>
   </Dialog>
 </template>
@@ -81,6 +83,8 @@ const props = defineProps({
   beforeSubmit: { type: Function, default: null },
   /** 提交处理函数，返回 Promise */
   onSubmit: { type: Function, required: true },
+  /** 是否显示底部按钮 */
+  showFooter: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(['update:open', 'success']);
@@ -106,6 +110,10 @@ function getFieldDefault(field) {
     return defaults;
   }
   return field.default ?? (field.type === 'number' ? 0 : (field.type === 'switch' ? 'active' : ''));
+}
+
+const handleClose = () => {
+  emit('update:open', false);
 }
 
 /**

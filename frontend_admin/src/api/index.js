@@ -105,4 +105,22 @@ export const chatApi = {
   getPoolStats: () => api.get('/chat/pool-stats'),
 }
 
+export const mcpApi = {
+  getAllServers: () => api.get('/mcp/servers'),
+  getServerById: (id) => api.get(`/mcp/servers/${id}`),
+  createServer: (data) => api.post('/mcp/servers', data),
+  updateServer: (id, data) => api.put(`/mcp/servers/${id}`, data),
+  deleteServer: (id) => api.delete(`/mcp/servers/${id}`),
+  connectServer: (serverId) => api.post('/mcp/servers/connect', { server_id: serverId }),
+  disconnectServer: (id) => api.post(`/mcp/servers/${id}/disconnect`),
+  getServerTools: (id) => api.get(`/mcp/servers/${id}/tools`),
+  listServerTools: (id) => api.get(`/mcp/servers/${id}/list-tools`),
+  pingServer: (id) => api.get(`/mcp/servers/${id}/ping`),
+  callTool: (serverId, toolName, arguments_) => api.post('/mcp/tools/call', {
+    server_id: serverId,
+    tool_name: toolName,
+    arguments: arguments_
+  }),
+}
+
 export { ApiError }

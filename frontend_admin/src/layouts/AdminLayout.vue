@@ -97,6 +97,7 @@ import {
   Sun,
   Moon,
   LayoutDashboard,
+  Server,
 } from "lucide-vue-next";
 
 const route = useRoute();
@@ -131,6 +132,11 @@ const navigation = [
     name: "Tools 管理",
     path: "/tools",
     icon: Wrench,
+  },
+  {
+    name: "MCP 管理",
+    path: "/mcp",
+    icon: Server,
   },
 ];
 
