@@ -1,78 +1,130 @@
 <script setup>
-import { computed } from 'vue'
+import { computed } from "vue";
+import { Check, X } from "lucide-vue-next";
 import {
-  Select,
   SelectContent,
   SelectItem,
+  SelectItemIndicator,
+  SelectItemText,
+  SelectRoot,
   SelectTrigger,
   SelectValue,
-} from './index'
+} from "./index";
 
-/**
- * 简单选择器组件
- * 外部只需提供数据，内部自动渲染
- */
 const props = defineProps({
-  /** 当前选中的值 */
-  modelValue: { type: [String, Number], default: '' },
-  /** 选项数据数组 */
+  modelValue: { type: [String, Number, Array], default: "" },
   options: {
     type: Array,
     default: () => [],
-    // 支持格式: [{ label: '显示文本', value: '值' }, ...] 或 ['值1', '值2', ...]
   },
-  /** 占位提示文本 */
-  placeholder: { type: String, default: '请选择' },
-  /** 是否禁用 */
+  placeholder: { type: String, default: "请选择" },
   disabled: { type: Boolean, default: false },
-  /** 选项标签字段名（当 options 为对象数组时） */
-  labelField: { type: String, default: 'label' },
-  /** 选项值字段名（当 options 为对象数组时） */
-  valueField: { type: String, default: 'value' },
-})
+  labelField: { type: String, default: "label" },
+  valueField: { type: String, default: "value" },
+  multiple: { type: Boolean, default: false },
+});
 
-const emit = defineEmits(['update:modelValue', 'change'])
+const emit = defineEmits(["update:modelValue", "change"]);
 
-/**
- * 处理选项数据，统一转换为 { label, value } 格式
- */
 const normalizedOptions = computed(() => {
-  return props.options.map(option => {
-    // 如果是字符串或数字，直接作为 value 和 label
-    if (typeof option === 'string' || typeof option === 'number') {
-      return { label: String(option), value: option }
+  return props.options.map((option) => {
+    if (typeof option === "string" || typeof option === "number") {
+      return { label: String(option), value: option };
     }
-    // 如果是对象，根据配置的字段名提取
     return {
       label: option[props.labelField],
       value: option[props.valueField],
-    }
-  })
-})
+    };
+  });
+});
 
-/**
- * 处理值变化
- * @param {string|number} value - 选中的值
- */
-function handleChange(value) {
-  emit('update:modelValue', value)
-  emit('change', value)
+const selectedLabels = computed(() => {
+  const value = props.modelValue;
+  if (props.multiple && Array.isArray(value)) {
+    if (value.length === 0) return "";
+    return value
+      .map((v) => {
+        const opt = normalizedOptions.value.find((o) => o.value === v);
+        return opt ? opt.label : v;
+      })
+      .join(", ");
+  }
+  if (value) {
+    const opt = normalizedOptions.value.find((o) => o.value === value);
+    return opt ? opt.label : value;
+  }
+  return "";
+});
+
+function handleValueChange(value) {
+  if (props.multiple) {
+    const current = props.modelValue || [];
+    let newArray;
+    if (current.includes(value)) {
+      newArray = current.filter((v) => v !== value);
+    } else {
+      newArray = [...current, value];
+    }
+    emit("update:modelValue", newArray);
+    emit("change", newArray);
+  } else {
+    emit("update:modelValue", value);
+    emit("change", value);
+  }
+}
+
+function handleMultiValueChange(values) {
+  emit("update:modelValue", values);
+  emit("change", values);
+}
+
+function clearSelection() {
+  emit("update:modelValue", []);
+  emit("change", []);
 }
 </script>
 
 <template>
-  <Select :model-value="modelValue" @update:model-value="handleChange" :disabled="disabled">
-    <SelectTrigger>
-      <SelectValue :placeholder="placeholder" />
-    </SelectTrigger>
-    <SelectContent>
-      <SelectItem
-        v-for="option in normalizedOptions"
-        :key="option.value"
-        :value="option.value"
-      >
-        {{ option.label }}
-      </SelectItem>
-    </SelectContent>
-  </Select>
+  <div class="relative">
+    <SelectRoot
+      :model-value="modelValue"
+      @update:model-value="
+        multiple ? handleMultiValueChange : handleValueChange
+      "
+      :multiple="multiple"
+      :disabled="disabled"
+    >
+      <SelectTrigger :class="multiple ? 'w-full' : 'w-full'">
+        <SelectValue :placeholder="placeholder">
+          <span v-if="selectedLabels" class="truncate">
+            {{ selectedLabels }}
+          </span>
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <div
+          v-for="option in normalizedOptions"
+          :key="option.value"
+          :value="option.value"
+          class="w-full"
+          @click="handleValueChange(option.value)"
+        >
+          <!-- 鼠标 -->
+          <div class="w-full flex items-center gap-2 cursor-pointer h-10 hover:bg-accent px-4 rounded-md">
+            <!-- <Check class="h-4 w-4" /> -->
+            <span class="font-medium text-foreground text-sm">{{ option.label }}</span>
+          </div>
+        </div>
+      </SelectContent>
+    </SelectRoot>
+
+    <button
+      v-if="multiple && selectedLabels"
+      type="button"
+      class="absolute right-8 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-md hover:bg-accent z-10"
+      @click.stop="clearSelection"
+    >
+      <X class="h-3 w-3" />
+    </button>
+  </div>
 </template>

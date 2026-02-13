@@ -10,6 +10,7 @@
       @update:model-value="$emit('update:modelValue', $event)"
       :options="field.options || []"
       :placeholder="field.placeholder || '请选择'"
+      :multiple="field.multiple || false"
     />
     
     <!-- Switch 类型 -->
@@ -73,7 +74,7 @@ import { SimpleSelect } from '@/components/ui/select'
 
 const props = defineProps({
   field: { type: Object, required: true },
-  modelValue: { type: [String, Number, Boolean], default: '' },
+  modelValue: { type: [String, Number, Boolean, Array], default: '' },
 })
 
 const emit = defineEmits(['update:modelValue'])

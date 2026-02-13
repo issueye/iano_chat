@@ -162,16 +162,10 @@ func (c *ProviderController) Update(ctx *web.Context) {
 		updates["model"] = *req.Model
 	}
 	if req.Temperature != nil {
-		updates["temperature"] = models.NullFloat32{
-			Float32: *req.Temperature,
-			Valid:   *req.Temperature != 0,
-		}
+		updates["temperature"] = *req.Temperature
 	}
 	if req.MaxTokens != nil {
-		updates["max_tokens"] = models.NullInt{
-			Int:   *req.MaxTokens,
-			Valid: *req.MaxTokens != 0,
-		}
+		updates["max_tokens"] = *req.MaxTokens
 	}
 	if req.IsDefault != nil {
 		updates["is_default"] = *req.IsDefault

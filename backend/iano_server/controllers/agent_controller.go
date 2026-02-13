@@ -33,15 +33,15 @@ type CreateAgentRequest struct {
 }
 
 type UpdateAgentRequest struct {
-	Name         *string `json:"name,omitempty" example:"助手"`
-	Description  *string `json:"description,omitempty" example:"通用助手"`
-	Type         *string `json:"type,omitempty" example:"main"`
-	IsSubAgent   *bool   `json:"is_sub_agent,omitempty" example:"false"`
-	ProviderID   *string `json:"provider_id,omitempty" example:"provider-001"`
-	Model        *string `json:"model,omitempty" example:"gpt-4"`
-	Instructions *string `json:"instructions,omitempty" example:"你是一个智能助手"`
-	Tools        *string `json:"tools,omitempty" example:"file_read,file_write"`
-	McpServerID  *string `json:"mcp_server_id,omitempty" example:"mcp-001"` // 关联的 MCP 服务器 ID
+	Name         *string   `json:"name,omitempty" example:"助手"`
+	Description  *string   `json:"description,omitempty" example:"通用助手"`
+	Type         *string   `json:"type,omitempty" example:"main"`
+	IsSubAgent   *bool     `json:"is_sub_agent,omitempty" example:"false"`
+	ProviderID   *string   `json:"provider_id,omitempty" example:"provider-001"`
+	Model        *string   `json:"model,omitempty" example:"gpt-4"`
+	Instructions *string   `json:"instructions,omitempty" example:"你是一个智能助手"`
+	Tools        *string   `json:"tools,omitempty" example:"file_read,file_write"`
+	McpServerIDs *[]string `json:"mcp_server_ids,omitempty" example:"mcp-001"` // 关联的 MCP 服务器 ID
 }
 
 // Create godoc
@@ -185,6 +185,9 @@ func (c *AgentController) Update(ctx *web.Context) {
 	}
 	if req.Tools != nil {
 		updates["tools"] = *req.Tools
+	}
+	if req.McpServerIDs != nil {
+		updates["mcp_server_ids"] = models.StrArray(*req.McpServerIDs)
 	}
 
 	agent, err := c.agentService.Update(id, updates)

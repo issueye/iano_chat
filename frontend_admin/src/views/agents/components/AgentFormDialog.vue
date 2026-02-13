@@ -76,7 +76,7 @@ const fields = computed(() => [
   { key: 'instructions', label: '系统指令', type: 'textarea', rows: 4, placeholder: '输入系统指令...' },
   { key: 'tools', label: 'Tools', type: 'textarea', rows: 2, placeholder: '工具名称列表，JSON 数组格式' },
   {
-    key: 'mcp_servers',
+    key: 'mcp_server_ids',
     label: 'MCP 服务器',
     type: 'select',
     multiple: true,

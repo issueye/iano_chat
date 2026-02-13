@@ -20,7 +20,7 @@ type Agent struct {
 	Model        string    `gorm:"column:model" json:"model"`
 	Instructions string    `gorm:"column:instructions;type:text" json:"instructions"`
 	Tools        string    `gorm:"column:tools;type:text" json:"tools"`
-	MCPServerIDs []string  `gorm:"column:mcp_server_ids;type:text" json:"mcp_server_ids"`
+	MCPServerIDs StrArray  `gorm:"column:mcp_server_ids;type:text" json:"mcp_server_ids"`
 }
 
 func (Agent) TableName() string {
