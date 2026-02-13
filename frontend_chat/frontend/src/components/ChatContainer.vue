@@ -103,6 +103,8 @@ onMounted(() => {
  * 创建新会话
  */
 async function handleCreateSession() {
+  chatStore.cancelStreaming()
+  chatStore.clearCurrentSession()
   await chatStore.createSession()
   isSidebarOpen.value = false
 }
@@ -112,6 +114,10 @@ async function handleCreateSession() {
  * @param sessionId - 会话 ID
  */
 async function handleSessionSelect(sessionId) {
+  // 如果切换到不同会话，先取消当前的 SSE 连接
+  if (chatStore.currentSessionId && String(chatStore.currentSessionId) !== String(sessionId)) {
+    chatStore.cancelStreaming()
+  }
   chatStore.setCurrentSession(sessionId)
   await chatStore.fetchMessagesBySession(sessionId)
   isSidebarOpen.value = false

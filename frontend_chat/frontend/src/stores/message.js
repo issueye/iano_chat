@@ -15,13 +15,36 @@ export const useMessageStore = defineStore('message', () => {
   const isLoading = ref(false)
   /** 错误信息 */
   const error = ref(null)
+  /** SSE 连接状态 */
+  const connectionStatus = ref('disconnected')
   /** 用于取消请求的 AbortController */
   const abortController = ref(null)
   /** 重连配置 */
   const reconnectConfig = {
-    maxRetries: 3,
-    retryDelay: 1000,
+    maxRetries: 5,
+    baseDelay: 1000,
+    maxDelay: 10000,
     retryCount: 0
+  }
+
+  /**
+   * 计算重连延迟（指数退避）
+   * @param retryCount - 当前重试次数
+   */
+  function getRetryDelay(retryCount) {
+    const delay = Math.min(
+      reconnectConfig.baseDelay * Math.pow(2, retryCount),
+      reconnectConfig.maxDelay
+    )
+    return delay + Math.random() * 500
+  }
+
+  /**
+   * 设置连接状态
+   * @param status - 连接状态
+   */
+  function setConnectionStatus(status) {
+    connectionStatus.value = status
   }
 
   /**
@@ -98,6 +121,7 @@ export const useMessageStore = defineStore('message', () => {
       abortController.value = null
     }
     reconnectConfig.retryCount = reconnectConfig.maxRetries
+    setConnectionStatus('disconnected')
     setLoading(false)
   }
 
@@ -147,6 +171,8 @@ export const useMessageStore = defineStore('message', () => {
     let accumulatedToolCalls = []
     let contentBlocks = []
     let assistantMessageId = null
+
+    setConnectionStatus('connecting')
 
     try {
       abortController.value = new AbortController()
@@ -248,6 +274,7 @@ export const useMessageStore = defineStore('message', () => {
                 })
               } else if (currentEventType === 'error') {
                 setError(eventData.error)
+                setConnectionStatus('disconnected')
                 if (assistantMessageId) {
                   updateMessage(assistantMessageId, { status: 'failed' })
                 }
@@ -263,6 +290,7 @@ export const useMessageStore = defineStore('message', () => {
         }
       }
 
+      setConnectionStatus('connected')
       setLoading(false)
 
     } catch (err) {
@@ -270,6 +298,7 @@ export const useMessageStore = defineStore('message', () => {
         if (assistantMessageId) {
           updateMessage(assistantMessageId, { status: 'failed' })
         }
+        setConnectionStatus('disconnected')
         setLoading(false)
         return
       }
@@ -282,19 +311,51 @@ export const useMessageStore = defineStore('message', () => {
 
       if (isNetworkError && reconnectConfig.retryCount < reconnectConfig.maxRetries) {
         reconnectConfig.retryCount++
+        const delay = getRetryDelay(reconnectConfig.retryCount - 1)
+        setConnectionStatus('reconnecting')
         setError(`连接断开，正在重连 (${reconnectConfig.retryCount}/${reconnectConfig.maxRetries})...`)
         
-        await new Promise(resolve => setTimeout(resolve, reconnectConfig.retryDelay * reconnectConfig.retryCount))
+        await new Promise(resolve => setTimeout(resolve, delay))
         
         return streamChat(content, directory, sessionId, agentId)
       }
 
       setError(err.message)
+      setConnectionStatus('disconnected')
       if (assistantMessageId) {
         updateMessage(assistantMessageId, { status: 'failed' })
       }
       setLoading(false)
     }
+  }
+
+  /**
+   * 断开 SSE 连接
+   */
+  function disconnect() {
+    if (abortController.value) {
+      abortController.value.abort()
+      abortController.value = null
+    }
+    reconnectConfig.retryCount = reconnectConfig.maxRetries
+    setConnectionStatus('disconnected')
+    setLoading(false)
+  }
+
+  /**
+   * 检查连接状态
+   * @returns {string} 连接状态
+   */
+  function getConnectionStatus() {
+    return connectionStatus.value
+  }
+
+  /**
+   * 重置重连计数
+   */
+  function resetReconnectCount() {
+    reconnectConfig.retryCount = 0
+    setConnectionStatus('connected')
   }
 
   /**
@@ -387,14 +448,19 @@ export const useMessageStore = defineStore('message', () => {
     messages,
     isLoading,
     error,
+    connectionStatus,
     currentMessages,
     addMessage,
     updateMessage,
     setLoading,
     setError,
+    setConnectionStatus,
     clearError,
     clearCurrentSession,
     cancelStreaming,
+    disconnect,
+    getConnectionStatus,
+    resetReconnectCount,
     fetchMessagesBySession,
     sendMessage,
     sendMessageNonStreaming,
