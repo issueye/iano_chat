@@ -18,10 +18,8 @@ import (
 )
 
 const (
-	ThinkStartTag        = "<think>"            // 思考开始标签
-	ThinkEndTag          = "</think>"           // 思考结束标签
-	ThinkUnicodeStartTag = "\u003cthink\u003e"  // 思考开始标签的 Unicode 编码
-	ThinkUnicodeEndTag   = "\u003c/think\u003e" // 思考结束标签的 Unicode 编码
+	ThinkStartTag = "<think>"  // 思考开始标签
+	ThinkEndTag   = "</think>" // 思考结束标签
 )
 
 func (a *Agent) Chat(ctx context.Context, userInput string) (string, error) {
@@ -198,29 +196,57 @@ func (a *Agent) InvokeMsgCB(msg *schema.Message) {
 
 	msgs := []*SplitMessage{}
 
-	// 如果是 think 的话，就需要将内容拆分为思考内容和正常内容
 	if a.IsThink {
-		// 应该直接回答这个问题。\n\u003c/think\u003e\n\n我是 **MiniMax-M2.5**，一个由 MiniMax 公司开发的 AI 助手。
-		if strings.Contains(msg.Content, ThinkEndTag) {
-			arr := strings.Split(msg.Content, ThinkEndTag)
-			for _, item := range arr {
+		content := msg.Content
+		for {
+			startIdx := strings.Index(content, ThinkStartTag)
+			endIdx := strings.Index(content, ThinkEndTag)
+
+			if startIdx == -1 && endIdx == -1 {
+				if len(content) > 0 {
+					msgs = append(msgs, &SplitMessage{
+						Content: content,
+						IsThink: true,
+					})
+				}
+				break
+			}
+
+			if endIdx != -1 && (startIdx == -1 || endIdx < startIdx) {
+				if endIdx > 0 {
+					msgs = append(msgs, &SplitMessage{
+						Content: content[:endIdx],
+						IsThink: true,
+					})
+				}
 				msgs = append(msgs, &SplitMessage{
-					Content: item,
-					IsThink: true,
+					Content: content[endIdx+len(ThinkEndTag):],
+					IsThink: false,
 				})
+				break
+			}
+
+			if startIdx != -1 && (endIdx == -1 || startIdx < endIdx) {
+				if startIdx > 0 {
+					msgs = append(msgs, &SplitMessage{
+						Content: content[:startIdx],
+						IsThink: false,
+					})
+				}
+				content = content[startIdx+len(ThinkStartTag):]
 			}
 		}
+	} else {
+		msgs = append(msgs, &SplitMessage{
+			Content: msg.Content,
+			IsThink: false,
+		})
 	}
-
-	msgs = append(msgs, &SplitMessage{
-		Content: msg.Content,
-		IsThink: a.IsThink,
-	})
 
 	for _, c := range msgs {
 		msgStruct := &Message{
 			Role:             string(msg.Role),
-			Content:          msg.Content,
+			Content:          c.Content,
 			ReasoningContent: msg.ReasoningContent,
 			ThinkContent:     c.Content,
 			ToolCall:         nil,
