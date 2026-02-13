@@ -23,6 +23,7 @@ type AgentRuntimeService struct {
 	agentService    *AgentService
 	providerService *ProviderService
 	toolService     *ToolService
+	mcpService      *MCPService
 	modelCache      map[string]model.ToolCallingChatModel
 }
 
@@ -38,6 +39,24 @@ func NewAgentRuntimeService(
 		agentService:    agentService,
 		providerService: providerService,
 		toolService:     toolService,
+		modelCache:      make(map[string]model.ToolCallingChatModel),
+	}
+}
+
+// NewAgentRuntimeServiceWithMCP 创建带 MCP 支持的 Agent 运行时服务
+func NewAgentRuntimeServiceWithMCP(
+	db *gorm.DB,
+	agentService *AgentService,
+	providerService *ProviderService,
+	toolService *ToolService,
+	mcpService *MCPService,
+) *AgentRuntimeService {
+	return &AgentRuntimeService{
+		db:              db,
+		agentService:    agentService,
+		providerService: providerService,
+		toolService:     toolService,
+		mcpService:      mcpService,
 		modelCache:      make(map[string]model.ToolCallingChatModel),
 	}
 }
@@ -210,7 +229,155 @@ func (s *AgentRuntimeService) loadToolsToAgent(ctx context.Context, agent *iano.
 		}
 	}
 
+	if s.mcpService != nil {
+		if err := s.loadMCPToolsToAgent(ctx, agent, config); err != nil {
+			slog.Warn("Failed to load MCP tools to agent", "agentID", config.ID, "error", err)
+		}
+	}
+
 	return nil
+}
+
+// parseMCPServers 解析 MCP 服务器列表
+func (s *AgentRuntimeService) parseMCPServers(mcpServersStr string) []string {
+	if mcpServersStr == "" {
+		return nil
+	}
+
+	var servers []string
+	if err := json.Unmarshal([]byte(mcpServersStr), &servers); err != nil {
+		return []string{mcpServersStr}
+	}
+	return servers
+}
+
+// loadMCPToolsToAgent 加载 MCP 工具到 Agent
+func (s *AgentRuntimeService) loadMCPToolsToAgent(ctx context.Context, agent *iano.Agent, config *models.Agent) error {
+	mcpServers := s.parseMCPServers(config.MCPServers)
+	if len(mcpServers) == 0 {
+		return nil
+	}
+
+	for _, serverID := range mcpServers {
+		server, err := s.mcpService.ServerService.GetByID(serverID)
+		if err != nil {
+			slog.Warn("MCP Server not found", "serverID", serverID, "error", err)
+			continue
+		}
+
+		if server.Status != models.MCPServerStatusConnected {
+			slog.Warn("MCP Server not connected", "serverID", serverID, "status", server.Status)
+			continue
+		}
+
+		tools, err := s.mcpService.ServerToolService.GetByServerID(serverID)
+		if err != nil {
+			slog.Warn("Failed to get MCP server tools", "serverID", serverID, "error", err)
+			continue
+		}
+
+		for _, tool := range tools {
+			dynamicTool, err := s.createMCPDynamicTool(serverID, &tool)
+			if err != nil {
+				slog.Warn("Failed to create MCP dynamic tool", "toolName", tool.Name, "error", err)
+				continue
+			}
+
+			toolName := fmt.Sprintf("mcp_%s_%s", serverID[:8], tool.Name)
+			if err := agent.AddTool(toolName, dynamicTool); err != nil {
+				slog.Warn("Failed to add MCP tool to agent", "toolName", toolName, "error", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// createMCPDynamicTool 创建 MCP 动态工具
+func (s *AgentRuntimeService) createMCPDynamicTool(serverID string, tool *models.MCPServerTool) (*iano.DynamicTool, error) {
+	var params []iano.ToolParamDef
+	if tool.InputSchema != "" {
+		var schema map[string]interface{}
+		if err := json.Unmarshal([]byte(tool.InputSchema), &schema); err == nil {
+			params = s.parseJSONSchemaToToolParams(schema)
+		}
+	}
+
+	cfg := &iano.DynamicToolConfig{
+		Name:       tool.Name,
+		Desc:       tool.Description,
+		Parameters: params,
+		Handler:    s.createMCPToolHandler(serverID, tool.Name),
+	}
+
+	return iano.NewDynamicTool(cfg), nil
+}
+
+// parseJSONSchemaToToolParams 将 JSON Schema 转换为工具参数
+func (s *AgentRuntimeService) parseJSONSchemaToToolParams(schema map[string]interface{}) []iano.ToolParamDef {
+	var params []iano.ToolParamDef
+
+	properties, ok := schema["properties"].(map[string]interface{})
+	if !ok {
+		return params
+	}
+
+	required, _ := schema["required"].([]interface{})
+	requiredMap := make(map[string]bool)
+	for _, r := range required {
+		if rStr, ok := r.(string); ok {
+			requiredMap[rStr] = true
+		}
+	}
+
+	for name, prop := range properties {
+		propMap, ok := prop.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		param := iano.ToolParamDef{
+			Name:     name,
+			Required: requiredMap[name],
+		}
+
+		if desc, ok := propMap["description"].(string); ok {
+			param.Desc = desc
+		}
+
+		if paramType, ok := propMap["type"].(string); ok {
+			param.Type = paramType
+		}
+
+		params = append(params, param)
+	}
+
+	return params
+}
+
+// createMCPToolHandler 创建 MCP 工具处理器
+func (s *AgentRuntimeService) createMCPToolHandler(serverID string, toolName string) iano.DynamicToolHandler {
+	return func(ctx context.Context, params map[string]interface{}) (string, error) {
+		result, err := s.mcpService.CallTool(ctx, serverID, toolName, params)
+		if err != nil {
+			return "", fmt.Errorf("MCP tool call failed: %w", err)
+		}
+
+		if result.IsError {
+			return "", fmt.Errorf("MCP tool returned error: %v", result.Content)
+		}
+
+		if len(result.Content) == 0 {
+			return "{}", nil
+		}
+
+		contentBytes, err := json.Marshal(result.Content)
+		if err != nil {
+			return "", fmt.Errorf("failed to marshal result: %w", err)
+		}
+
+		return string(contentBytes), nil
+	}
 }
 
 // createDynamicTool 创建动态工具

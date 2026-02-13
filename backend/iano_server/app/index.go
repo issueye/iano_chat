@@ -68,6 +68,8 @@ func (a *App) InitDB() error {
 		&models.Message{},
 		&models.Agent{},
 		&models.Tool{},
+		&models.MCPServer{},
+		&models.MCPServerTool{},
 	)
 }
 

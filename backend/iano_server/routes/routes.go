@@ -80,7 +80,8 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *web.Engine {
 	sessionService := services.NewSessionService(db)
 	toolService := services.NewToolService(db)
 	providerService := services.NewProviderService(db)
-	agentRuntimeService := services.NewAgentRuntimeService(db, agentService, providerService, toolService)
+	mcpService := services.NewMCPService(db)
+	agentRuntimeService := services.NewAgentRuntimeServiceWithMCP(db, agentService, providerService, toolService, mcpService)
 
 	agentController := controllers.NewAgentController(agentService, agentRuntimeService)
 	messageController := controllers.NewMessageController(messageService)
@@ -88,6 +89,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *web.Engine {
 	toolController := controllers.NewToolController(toolService)
 	providerController := controllers.NewProviderController(providerService)
 	chatController := controllers.NewChatController(agentService, providerService, messageService, agentRuntimeService)
+	mcpController := controllers.NewMCPController(mcpService)
 	baseController := &controllers.BaseController{}
 
 	engine.GET("/health", func(c *web.Context) {
@@ -141,6 +143,18 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *web.Engine {
 
 	engine.POST("/api/chat/stream", chatController.StreamChat)
 	engine.DELETE("/api/chat/session/:session_id", chatController.ClearSession)
+
+	engine.POST("/api/mcp/servers", mcpController.CreateServer)
+	engine.GET("/api/mcp/servers", mcpController.GetAllServers)
+	engine.GET("/api/mcp/servers/:id", mcpController.GetServerByID)
+	engine.PUT("/api/mcp/servers/:id", mcpController.UpdateServer)
+	engine.DELETE("/api/mcp/servers/:id", mcpController.DeleteServer)
+	engine.POST("/api/mcp/servers/connect", mcpController.ConnectServer)
+	engine.POST("/api/mcp/servers/:id/disconnect", mcpController.DisconnectServer)
+	engine.GET("/api/mcp/servers/:id/tools", mcpController.GetServerTools)
+	engine.GET("/api/mcp/servers/:id/list-tools", mcpController.ListTools)
+	engine.GET("/api/mcp/servers/:id/ping", mcpController.Ping)
+	engine.POST("/api/mcp/tools/call", mcpController.CallTool)
 
 	return engine
 }

@@ -20,6 +20,7 @@ type Agent struct {
 	Model        string    `json:"model"`
 	Instructions string    `gorm:"type:text" json:"instructions"`
 	Tools        string    `gorm:"type:text" json:"tools"`
+	MCPServers   string    `gorm:"type:text" json:"mcp_servers"`
 }
 
 func (Agent) TableName() string {
