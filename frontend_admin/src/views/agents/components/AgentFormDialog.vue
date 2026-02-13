@@ -15,7 +15,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { FormDialog } from '@/components/ui/form-dialog'
-import { agentApi, providerApi } from '@/api'
+import { agentApi, providerApi, mcpApi } from '@/api'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -27,6 +27,7 @@ const emit = defineEmits(['update:open', 'success'])
 const dialogOpen = ref(props.open)
 const currentId = ref(null)
 const providerOptions = ref([])
+const mcpServerOptions = ref([])
 
 const isEdit = computed(() => !!currentId.value)
 
@@ -74,6 +75,14 @@ const fields = computed(() => [
   },
   { key: 'instructions', label: '系统指令', type: 'textarea', rows: 4, placeholder: '输入系统指令...' },
   { key: 'tools', label: 'Tools', type: 'textarea', rows: 2, placeholder: '工具名称列表，JSON 数组格式' },
+  {
+    key: 'mcp_servers',
+    label: 'MCP 服务器',
+    type: 'select',
+    multiple: true,
+    options: mcpServerOptions.value,
+    placeholder: '选择 MCP 服务器',
+  },
 ])
 
 watch(() => props.open, (val) => {
@@ -107,6 +116,18 @@ async function fetchProviders() {
   }
 }
 
+async function fetchMCPServers() {
+  try {
+    const result = await mcpApi.getAllServers()
+    mcpServerOptions.value = (result.data || []).map(s => ({
+      label: s.name,
+      value: s.id,
+    }))
+  } catch (e) {
+    console.error('Failed to fetch MCP servers:', e)
+  }
+}
+
 async function handleSubmit(formData, isEditMode, id) {
   if (isEditMode) {
     await agentApi.update(id, formData)
@@ -117,5 +138,6 @@ async function handleSubmit(formData, isEditMode, id) {
 
 onMounted(() => {
   fetchProviders()
+  fetchMCPServers()
 })
 </script>
