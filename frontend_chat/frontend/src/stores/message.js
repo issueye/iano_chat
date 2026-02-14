@@ -198,6 +198,8 @@ export const useMessageStore = defineStore('message', () => {
       const decoder = new TextDecoder()
       let currentEventType = ''
       let accumulatedReasoning = ''
+      let isInThink = false
+      let thinkContent = ''
 
       while (true) {
         const { done, value } = await reader.read()
@@ -280,6 +282,41 @@ export const useMessageStore = defineStore('message', () => {
                     text: accumulatedContent,
                     tool_calls: accumulatedToolCalls,
                     reasoning_content: accumulatedReasoning
+                  })
+                })
+              } else if (currentEventType === 'message_content' && assistantMessageId) {
+                const eventContent = eventData.content || ''
+                const eventThinkContent = eventData.think_content || ''
+                const eventIsThink = eventData.is_think || false
+
+                if (eventIsThink) {
+                  if (!isInThink) {
+                    isInThink = true
+                    thinkContent = ''
+                  }
+                  thinkContent += eventThinkContent
+                } else {
+                  if (isInThink) {
+                    isInThink = false
+                  }
+                  accumulatedContent += eventContent
+
+                  const lastBlock = contentBlocks[contentBlocks.length - 1]
+                  if (lastBlock && lastBlock.type === 'text') {
+                    lastBlock.text += eventContent
+                  } else if (eventContent) {
+                    contentBlocks.push({ type: 'text', text: eventContent })
+                  }
+                }
+
+                updateMessage(assistantMessageId, {
+                  content: JSON.stringify({
+                    blocks: contentBlocks,
+                    text: accumulatedContent,
+                    tool_calls: accumulatedToolCalls,
+                    reasoning_content: accumulatedReasoning,
+                    think_content: thinkContent,
+                    is_think: isInThink
                   })
                 })
               } else if (currentEventType === 'message_completed' && assistantMessageId) {

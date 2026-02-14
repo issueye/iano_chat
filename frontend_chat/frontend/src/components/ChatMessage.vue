@@ -134,6 +134,13 @@
             </div>
           </div>
 
+          <!-- Think Content -->
+          <div v-if="messageContent.is_think" class="mt-3">
+            <div class="text-xs opacity-70 italic border-l-2 border-yellow-500 pl-3 py-1 text-yellow-600 dark:text-yellow-400">
+              {{ messageContent.think_content }}
+            </div>
+          </div>
+
           <!-- Reasoning -->
           <div v-if="messageContent.reasoning_content" class="mt-3">
             <div
