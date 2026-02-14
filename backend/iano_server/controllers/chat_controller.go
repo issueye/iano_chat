@@ -155,6 +155,14 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 			"created_at": userMsg.CreatedAt,
 		})
 
+		sse.EmitDataToID(req.SessionID, models.MessageEventCreated.ToString(), map[string]interface{}{
+			"type":       models.MessageTypeAssistant.ToString(),
+			"id":         assistantMsg.ID,
+			"session_id": assistantMsg.SessionID,
+			"content":    assistantMsg.Content,
+			"created_at": assistantMsg.CreatedAt,
+		})
+
 		// 获取 Agent 实例
 		agentParams := &services.AgentParams{
 			AgentID:  agentID,
