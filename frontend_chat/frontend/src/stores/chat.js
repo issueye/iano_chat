@@ -18,7 +18,7 @@ export const useChatStore = defineStore('chat', () => {
 
   const { sessions, currentSessionId, searchKeyword, currentSession, filteredSessions } = storeToRefs(sessionStore)
   const { agents, currentAgentId, mainAgents, currentAgent } = storeToRefs(agentStore)
-  const { messages, isLoading, error, currentMessages } = storeToRefs(messageStore)
+  const { messages, isLoading, error, currentMessages, connectionStatus } = storeToRefs(messageStore)
 
   return {
     sessions,
@@ -34,6 +34,7 @@ export const useChatStore = defineStore('chat', () => {
     isLoading,
     error,
     currentMessages,
+    connectionStatus,
 
     setCurrentSession: sessionStore.setCurrentSession,
     setSearchKeyword: sessionStore.setSearchKeyword,

@@ -124,8 +124,9 @@ func (a *Agent) Loop(ctx context.Context, messages []*schema.Message) (string, e
 					slog.Info("工具调用完成", "id", tc.ID, "name", tc.Function.Name, "arguments", tc.Function.Arguments, "result", toolResult)
 
 					loopMessage = append(loopMessage, &schema.Message{
-						Role:    schema.Tool,
-						Content: fmt.Sprintf("工具调用结果: %s", toolResult),
+						Role:       schema.Tool,
+						Content:    fmt.Sprintf("工具调用结果: %s", toolResult),
+						ToolCallID: tc.ID,
 					})
 					fullResponse += fmt.Sprintf("\n工具调用结果: %s", toolResult)
 

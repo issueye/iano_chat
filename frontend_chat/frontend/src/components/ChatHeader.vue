@@ -21,7 +21,20 @@
       </div>
     </div>
 
-    <div class="flex items-center gap-1">
+    <div class="flex items-center gap-3">
+      <!-- 连接状态 -->
+      <div class="flex items-center gap-1.5">
+        <span
+          :class="[
+            'w-2 h-2 rounded-full',
+            statusConfig.bgColor
+          ]"
+        ></span>
+        <span :class="['text-xs', statusConfig.textColor]">
+          {{ statusConfig.text }}
+        </span>
+      </div>
+
       <Button
         variant="ghost"
         size="icon"
@@ -50,13 +63,14 @@
  * ChatHeader 组件 - 聊天界面头部
  * 显示当前会话标题、消息数量和操作按钮
  */
+import { computed } from "vue"
 import { Button } from "@/components/ui/button"
 import { Menu, Trash2, Sun, Moon } from "lucide-vue-next"
 
 /**
  * 组件属性定义
  */
-defineProps({
+const props = defineProps({
   /** 会话标题 */
   title: {
     type: String,
@@ -72,8 +86,43 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  /** 连接状态 */
+  connectionStatus: {
+    type: String,
+    default: "disconnected",
+  },
 })
 
 /** 组件事件定义 */
 const emit = defineEmits(["toggle-sidebar", "clear-chat", "toggle-theme"])
+
+const statusConfig = computed(() => {
+  switch (props.connectionStatus) {
+    case "connected":
+      return {
+        text: "已连接",
+        bgColor: "bg-green-500",
+        textColor: "text-green-500",
+      }
+    case "connecting":
+      return {
+        text: "连接中",
+        bgColor: "bg-yellow-500 animate-pulse",
+        textColor: "text-yellow-500",
+      }
+    case "reconnecting":
+      return {
+        text: "重连中",
+        bgColor: "bg-yellow-500 animate-pulse",
+        textColor: "text-yellow-500",
+      }
+    case "disconnected":
+    default:
+      return {
+        text: "已断开",
+        bgColor: "bg-red-500",
+        textColor: "text-red-500",
+      }
+  }
+})
 </script>

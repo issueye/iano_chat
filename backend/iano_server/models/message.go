@@ -71,6 +71,8 @@ type MessageContent struct {
 	Text             string         `json:"text,omitempty"`
 	ToolCalls        []ToolCall     `json:"tool_calls,omitempty"`
 	ReasoningContent string         `json:"reasoning_content,omitempty"`
+	ThinkContent     string         `json:"think_content,omitempty"`
+	IsThink          bool           `json:"is_think,omitempty"`
 	Attachments      []Attachment   `json:"attachments,omitempty"`
 }
 

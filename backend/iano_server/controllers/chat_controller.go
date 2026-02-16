@@ -163,11 +163,19 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 			"created_at": assistantMsg.CreatedAt,
 		})
 
+		// 累积消息内容
+		accumulatedContent := map[string]interface{}{
+			"text":              "",
+			"reasoning_content": "",
+			"think_content":     "",
+			"is_think":          false,
+		}
+
 		// 获取 Agent 实例
 		agentParams := &services.AgentParams{
 			AgentID:  agentID,
 			WorkDir:  req.WorkDir,
-			Callback: Callback(req.SessionID, sse),
+			Callback: Callback(req.SessionID, sse, c.messageService, assistantMsg.ID, &accumulatedContent),
 		}
 		agent, err := c.agentRuntimeService.GetAgent(ctx.Request.Context(), agentParams)
 		if err != nil {
@@ -214,7 +222,7 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 			return
 		}
 
-		agent.Agent.AppendCB(Callback(req.SessionID, sse))
+		agent.Agent.AppendCB(Callback(req.SessionID, sse, nil, "", nil))
 		agent.Agent.WaitForResponse()
 	}
 
@@ -222,8 +230,44 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 	sse.Close()
 }
 
-func Callback(sessionID string, sse *web.SSEContext) func(msg *iano.Message) {
+func Callback(sessionID string, sse *web.SSEContext, messageService *services.MessageService, assistantMsgID string, accumulatedContent *map[string]interface{}) func(msg *iano.Message) {
 	return func(msg *iano.Message) {
+		// 更新累积的内容
+		if accumulatedContent != nil {
+			content := *accumulatedContent
+
+			// 更新 text
+			if msg.Content != "" {
+				oldText, _ := content["text"].(string)
+				content["text"] = oldText + msg.Content
+			}
+
+			// 更新 reasoning_content
+			if msg.ReasoningContent != "" {
+				oldReasoning, _ := content["reasoning_content"].(string)
+				content["reasoning_content"] = oldReasoning + msg.ReasoningContent
+			}
+
+			// 更新 think_content
+			if msg.ThinkContent != "" {
+				oldThink, _ := content["think_content"].(string)
+				content["think_content"] = oldThink + msg.ThinkContent
+			}
+
+			// 更新 is_think
+			if msg.IsThink {
+				content["is_think"] = true
+			}
+
+			// 保存到数据库
+			if assistantMsgID != "" && messageService != nil {
+				contentJSON, _ := json.Marshal(content)
+				messageService.Update(assistantMsgID, map[string]interface{}{
+					"content": string(contentJSON),
+				})
+			}
+		}
+
 		sse.EmitDataToID(sessionID, models.MessageEventContent.ToString(), msg)
 	}
 }

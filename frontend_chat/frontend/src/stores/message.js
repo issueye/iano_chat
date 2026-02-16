@@ -320,9 +320,27 @@ export const useMessageStore = defineStore('message', () => {
                   })
                 })
               } else if (currentEventType === 'message_completed' && assistantMessageId) {
+                const currentMessage = messages.value.find(m => m.id === assistantMessageId)
+                let currentContent = { blocks: [], text: '', tool_calls: [], reasoning_content: '', think_content: '', is_think: false }
+                try {
+                  if (currentMessage?.content) {
+                    currentContent = JSON.parse(currentMessage.content)
+                  }
+                } catch (e) {}
+
+                let finalContent = currentContent
+                if (eventData.content) {
+                  try {
+                    const parsedContent = JSON.parse(eventData.content)
+                    finalContent = { ...currentContent, ...parsedContent }
+                  } catch (e) {
+                    finalContent = { ...currentContent, text: eventData.content }
+                  }
+                }
+
                 updateMessage(assistantMessageId, {
                   status: eventData.status,
-                  ...(eventData.content && { content: eventData.content })
+                  content: JSON.stringify(finalContent)
                 })
               } else if (currentEventType === 'error') {
                 setError(eventData.error)

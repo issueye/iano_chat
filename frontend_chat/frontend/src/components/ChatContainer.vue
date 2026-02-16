@@ -28,6 +28,7 @@
         :title="chatStore.currentSession?.title"
         :message-count="chatStore.currentMessages.length"
         :is-dark="themeStore.isDark"
+        :connection-status="connectionStatus"
         @toggle-sidebar="isSidebarOpen = true"
         @clear-chat="clearChat"
         @toggle-theme="themeStore.toggleTheme"
@@ -70,7 +71,7 @@
  * ChatContainer 组件 - 聊天主容器
  * 整合侧边栏、头部、消息列表和输入区域
  */
-import { ref, computed, onMounted } from "vue"
+import { ref, onMounted } from "vue"
 import { useChatStore } from "@/stores/chat"
 import { useThemeStore } from "@/stores/theme"
 import SessionList from "./SessionList.vue"
@@ -82,6 +83,8 @@ import { AlertDialog } from "@/components/ui/alert-dialog"
 
 const chatStore = useChatStore()
 const themeStore = useThemeStore()
+
+const connectionStatus = chatStore.connectionStatus
 
 /** 侧边栏是否打开 */
 const isSidebarOpen = ref(false)
