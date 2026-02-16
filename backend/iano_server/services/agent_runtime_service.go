@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cloudwego/eino-ext/components/model/openai"
 	"github.com/cloudwego/eino/components/model"
@@ -19,13 +20,20 @@ import (
 )
 
 type AgentSSEClient struct {
-	Agent      *AgentWrapper
-	SSEClients []*web.SSEContext
+	Agent         *AgentWrapper
+	SSEClients    []*web.SSEContext
+	LastHeartbeat time.Time
 }
 
+const (
+	HeartbeatInterval = 30 * time.Second // 心跳间隔
+	HeartbeatTimeout  = 90 * time.Second // 心跳超时时间
+)
+
 type AgentSSEClientMap struct {
-	Data map[string]*AgentSSEClient
-	mux  sync.RWMutex
+	Data          map[string]*AgentSSEClient
+	mux           sync.RWMutex
+	heartbeatChan chan string // 心跳信号通道
 }
 
 func NewAgentSSEClientMap() *AgentSSEClientMap {
@@ -107,6 +115,52 @@ func (m *AgentSSEClientMap) CheckAgent(sessionID string) bool {
 		return client.Agent != nil
 	}
 	return false
+}
+
+// SendHeartbeat 向指定会话发送心跳
+func (m *AgentSSEClientMap) SendHeartbeat(sessionID string) {
+	m.mux.RLock()
+	defer m.mux.RUnlock()
+
+	if client, exists := m.Data[sessionID]; exists {
+		client.LastHeartbeat = time.Now()
+		for _, sse := range client.SSEClients {
+			if !sse.IsClosed() {
+				sse.EmitDataToID(sessionID, "heartbeat", map[string]interface{}{
+					"timestamp": time.Now().Unix(),
+				})
+			}
+		}
+	}
+}
+
+// StartHeartbeat 启动心跳机制
+func (m *AgentSSEClientMap) StartHeartbeat() {
+	if m.heartbeatChan == nil {
+		m.heartbeatChan = make(chan string, 10)
+	}
+
+	ticker := time.NewTicker(HeartbeatInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case sessionID := <-m.heartbeatChan:
+			m.SendHeartbeat(sessionID)
+		case <-ticker.C:
+			m.mux.RLock()
+			for sessionID, client := range m.Data {
+				for _, sse := range client.SSEClients {
+					if !sse.IsClosed() {
+						sse.EmitDataToID(sessionID, "heartbeat", map[string]interface{}{
+							"timestamp": time.Now().Unix(),
+						})
+					}
+				}
+			}
+			m.mux.RUnlock()
+		}
+	}
 }
 
 // AgentRuntimeService Agent 运行时服务

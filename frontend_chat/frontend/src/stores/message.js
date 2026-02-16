@@ -8,6 +8,8 @@ import { API_BASE } from './config'
 import { useSessionStore } from './session'
 import { useAgentStore } from './agent'
 
+const HEARTBEAT_TIMEOUT = 90000 // 90秒心跳超时
+
 export const useMessageStore = defineStore('message', () => {
   /** 消息列表 */
   const messages = ref([])
@@ -19,6 +21,9 @@ export const useMessageStore = defineStore('message', () => {
   const connectionStatus = ref('disconnected')
   /** 用于取消请求的 AbortController */
   const abortController = ref(null)
+  /** 心跳超时定时器 */
+  let heartbeatTimer = null
+  let lastHeartbeatTime = 0
   /** 重连配置 */
   const reconnectConfig = {
     maxRetries: 5,
@@ -120,6 +125,11 @@ export const useMessageStore = defineStore('message', () => {
       abortController.value.abort()
       abortController.value = null
     }
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer)
+      heartbeatTimer = null
+    }
+    lastHeartbeatTime = 0
     reconnectConfig.retryCount = reconnectConfig.maxRetries
     setConnectionStatus('disconnected')
     setLoading(false)
@@ -350,6 +360,9 @@ export const useMessageStore = defineStore('message', () => {
                 }
                 setLoading(false)
                 return
+              } else if (currentEventType === 'heartbeat') {
+                lastHeartbeatTime = Date.now()
+                setConnectionStatus('connected')
               }
             } catch (e) {
               // 忽略不完整 JSON 的解析错误
@@ -362,6 +375,19 @@ export const useMessageStore = defineStore('message', () => {
 
       setConnectionStatus('connected')
       setLoading(false)
+
+      // 启动心跳检测
+      lastHeartbeatTime = Date.now()
+      if (heartbeatTimer) {
+        clearInterval(heartbeatTimer)
+      }
+      heartbeatTimer = setInterval(() => {
+        const now = Date.now()
+        if (lastHeartbeatTime > 0 && now - lastHeartbeatTime > HEARTBEAT_TIMEOUT) {
+          setConnectionStatus('disconnected')
+          cancelStreaming()
+        }
+      }, 10000)
 
     } catch (err) {
       if (err.name === 'AbortError') {
