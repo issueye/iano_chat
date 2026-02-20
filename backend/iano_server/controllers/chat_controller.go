@@ -216,14 +216,69 @@ func (c *ChatController) StreamChat(ctx *web.Context) {
 		sse.EmitDataToID(req.SessionID, models.MessageEventCompleted.ToString(), map[string]string{"status": "completed"})
 	} else {
 		// Agent 已绑定，继续聊天
-		agent := c.agentSSEClientMap.GetSessionAgent(req.SessionID)
-		if agent == nil {
+		agentHolder := c.agentSSEClientMap.GetSessionAgent(req.SessionID)
+		if agentHolder == nil {
 			ctx.JSON(http.StatusInternalServerError, models.Fail("会话不存在"))
 			return
 		}
 
-		agent.Agent.AppendCB(Callback(req.SessionID, sse, nil, "", nil))
-		agent.Agent.WaitForResponse()
+		// 创建用户消息
+		userMsg := &models.Message{
+			SessionID: req.SessionID,
+			Type:      models.MessageTypeUser,
+			Status:    models.MessageStatusCompleted,
+		}
+		userMsg.NewID()
+		userMsg.Content = req.Message
+		c.messageService.Create(userMsg)
+
+		// 创建助手消息
+		assistantMsg := &models.Message{
+			SessionID: req.SessionID,
+			Type:      models.MessageTypeAssistant,
+			Status:    models.MessageStatusCompleted,
+		}
+		assistantMsg.NewID()
+		c.messageService.Create(assistantMsg)
+
+		sse.EmitDataToID(req.SessionID, models.MessageEventCreated.ToString(), map[string]interface{}{
+			"type":       models.MessageTypeUser.ToString(),
+			"id":         userMsg.ID,
+			"session_id": userMsg.SessionID,
+			"content":    userMsg.Content,
+			"created_at": userMsg.CreatedAt,
+		})
+
+		sse.EmitDataToID(req.SessionID, models.MessageEventCreated.ToString(), map[string]interface{}{
+			"type":       models.MessageTypeAssistant.ToString(),
+			"id":         assistantMsg.ID,
+			"session_id": assistantMsg.SessionID,
+			"content":    assistantMsg.Content,
+			"created_at": assistantMsg.CreatedAt,
+		})
+
+		// 累积消息内容
+		accumulatedContent := map[string]interface{}{
+			"text":              "",
+			"reasoning_content": "",
+			"think_content":     "",
+			"is_think":          false,
+		}
+
+		// 添加回调
+		agentHolder.Agent.AppendCB(Callback(req.SessionID, sse, c.messageService, assistantMsg.ID, &accumulatedContent))
+
+		// 发送消息给 Agent
+		chatMessages := []*schema.Message{
+			schema.UserMessage(req.Message),
+		}
+		_, err := agentHolder.Agent.Chat(ctx.Request.Context(), chatMessages)
+		if err != nil {
+			errSend := models.CreateErrCompleted(req.SessionID, models.MessageStatusFailed, err.Error())
+			sse.EmitDataToID(req.SessionID, models.MessageEventCompleted.ToString(), errSend)
+		}
+
+		sse.EmitDataToID(req.SessionID, models.MessageEventCompleted.ToString(), map[string]string{"status": "completed"})
 	}
 
 	sse.EmitDataToID(req.SessionID, models.MessageEventDone.ToString(), map[string]string{"status": "completed"})

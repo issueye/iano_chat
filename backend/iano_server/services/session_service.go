@@ -71,3 +71,7 @@ func (s *SessionService) Count() (int64, error) {
 	}
 	return count, nil
 }
+
+func (s *SessionService) HealthCheck() error {
+	return s.db.Exec("SELECT 1").Error
+}

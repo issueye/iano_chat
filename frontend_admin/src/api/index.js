@@ -123,4 +123,8 @@ export const mcpApi = {
   }),
 }
 
+export const systemApi = {
+  healthCheck: () => api.get('/health'),
+}
+
 export { ApiError }

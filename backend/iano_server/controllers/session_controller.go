@@ -27,7 +27,7 @@ type UpdateSessionRequest struct {
 }
 
 type UpdateSessionConfigRequest struct {
-	Config models.SessionConfig `json:"config"`
+	Config *models.SessionConfig `json:"config,omitempty"`
 }
 
 // Create godoc
@@ -192,13 +192,55 @@ func (c *SessionController) UpdateConfig(ctx *web.Context) {
 		return
 	}
 
+	if req.Config == nil {
+		ctx.JSON(http.StatusBadRequest, models.Fail("config is required"))
+		return
+	}
+
 	session, err := c.sessionService.GetByID(id)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, models.Fail("Session not found"))
 		return
 	}
 
-	if err := session.SetConfig(&req.Config); err != nil {
+	currentConfig, err := session.GetConfig()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
+		return
+	}
+
+	if req.Config.ModelID != 0 {
+		currentConfig.ModelID = req.Config.ModelID
+	}
+	if req.Config.SystemPrompt != "" {
+		currentConfig.SystemPrompt = req.Config.SystemPrompt
+	}
+	if req.Config.Temperature > 0 {
+		currentConfig.Temperature = req.Config.Temperature
+	}
+	if req.Config.MaxTokens > 0 {
+		currentConfig.MaxTokens = req.Config.MaxTokens
+	}
+	if req.Config.EnableTools {
+		currentConfig.EnableTools = req.Config.EnableTools
+	}
+	if req.Config.EnableSummary {
+		currentConfig.EnableSummary = req.Config.EnableSummary
+	}
+	if req.Config.EnableRateLimit {
+		currentConfig.EnableRateLimit = req.Config.EnableRateLimit
+	}
+	if req.Config.RateLimitRPM > 0 {
+		currentConfig.RateLimitRPM = req.Config.RateLimitRPM
+	}
+	if req.Config.KeepRounds > 0 {
+		currentConfig.KeepRounds = req.Config.KeepRounds
+	}
+	if len(req.Config.SelectedTools) > 0 {
+		currentConfig.SelectedTools = req.Config.SelectedTools
+	}
+
+	if err := session.SetConfig(currentConfig); err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
 		return
 	}

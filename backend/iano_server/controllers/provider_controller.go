@@ -42,7 +42,7 @@ type UpdateProviderRequest struct {
 // @Accept json
 // @Produce json
 // @Param provider body CreateProviderRequest true "Provider 信息"
-// @Success 201 {object} models.Response{data=models.Provider}
+// @Success 201 {object} models.Response{data=services.ProviderDTO}
 // @Failure 400 {object} models.Response
 // @Failure 500 {object} models.Response
 // @Router /api/providers [post]
@@ -70,7 +70,8 @@ func (c *ProviderController) Create(ctx *web.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, models.Success(provider))
+	dto := c.providerService.ToDTO(provider)
+	ctx.JSON(http.StatusCreated, models.Success(dto))
 }
 
 // GetByID godoc
@@ -79,13 +80,13 @@ func (c *ProviderController) Create(ctx *web.Context) {
 // @Tags Provider
 // @Produce json
 // @Param id path string true "Provider ID"
-// @Success 200 {object} models.Response{data=models.Provider}
+// @Success 200 {object} models.Response{data=services.ProviderDTO}
 // @Failure 404 {object} models.Response
 // @Router /api/providers/{id} [get]
 func (c *ProviderController) GetByID(ctx *web.Context) {
 	id := ctx.Param("id")
 
-	provider, err := c.providerService.GetByID(id)
+	provider, err := c.providerService.GetByIDDTO(id)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, models.Fail("Provider not found"))
 		return
@@ -98,11 +99,11 @@ func (c *ProviderController) GetByID(ctx *web.Context) {
 // @Description 获取所有 Provider 列表
 // @Tags Provider
 // @Produce json
-// @Success 200 {object} models.Response{data=[]models.Provider}
+// @Success 200 {object} models.Response{data=[]services.ProviderDTO}
 // @Failure 500 {object} models.Response
 // @Router /api/providers [get]
 func (c *ProviderController) GetAll(ctx *web.Context) {
-	providers, err := c.providerService.GetAll()
+	providers, err := c.providerService.GetAllDTO()
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.Fail(err.Error()))
 		return
@@ -115,7 +116,7 @@ func (c *ProviderController) GetAll(ctx *web.Context) {
 // @Description 获取默认的 Provider 配置
 // @Tags Provider
 // @Produce json
-// @Success 200 {object} models.Response{data=models.Provider}
+// @Success 200 {object} models.Response{data=services.ProviderDTO}
 // @Failure 404 {object} models.Response
 // @Router /api/providers/default [get]
 func (c *ProviderController) GetDefault(ctx *web.Context) {
@@ -135,7 +136,7 @@ func (c *ProviderController) GetDefault(ctx *web.Context) {
 // @Produce json
 // @Param id path string true "Provider ID"
 // @Param provider body UpdateProviderRequest true "更新内容"
-// @Success 200 {object} models.Response{data=models.Provider}
+// @Success 200 {object} models.Response{data=services.ProviderDTO}
 // @Failure 400 {object} models.Response
 // @Failure 500 {object} models.Response
 // @Router /api/providers/{id} [put]
@@ -177,7 +178,8 @@ func (c *ProviderController) Update(ctx *web.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, models.Success(provider))
+	dto := c.providerService.ToDTO(provider)
+	ctx.JSON(http.StatusOK, models.Success(dto))
 }
 
 // Delete godoc

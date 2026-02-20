@@ -80,7 +80,7 @@ func (c *Container) Provide(db *gorm.DB, cfg *config.Config) {
 		c.AgentSSEClientMap,
 	)
 	c.MCPController = controllers.NewMCPController(c.MCPService)
-	c.BaseController = &controllers.BaseController{}
+	c.BaseController = controllers.NewBaseController(c.ProviderService, c.SessionService, c.ToolService, c.AgentService)
 }
 
 // GetConfig 获取配置
